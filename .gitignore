@@ -1,4 +1,4 @@
-# Never commit BlueStacks binaries or decompiled proprietary source
+# --- BlueStacks files: never commit (proprietary) ---
 *.dll
 *.exe
 *.sys
@@ -9,6 +9,17 @@
 *.vdi
 decomp/
 backup/
+
+# --- build output ---
 build/
-bin/
-obj/
+src/*/bin/
+src/*/obj/
+
+# --- our own prebuilt tools (.NET Framework 4.8, ~1 MB): committed so every download works ---
+!/bin/
+!/bin/M1lator.Tool.exe
+!/bin/M1lator.Tool.exe.config
+!/bin/M1lator.ThemeGen.exe
+!/bin/M1lator.ThemeGen.exe.config
+!/bin/M1lator.Boost.dll
+!/bin/dnlib.dll

@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -40,9 +43,10 @@ static class ThemeGen
     {
         if (Directory.Exists(outDir)) Directory.Delete(outDir, true);
         int png = 0;
-        foreach (var src in Directory.EnumerateFiles(srcDir, "*", SearchOption.AllDirectories))
+        string srcRoot = Path.GetFullPath(srcDir).TrimEnd('\\') + "\\";
+        foreach (var src in Directory.EnumerateFiles(srcRoot, "*", SearchOption.AllDirectories))
         {
-            var dst = Path.Combine(outDir, Path.GetRelativePath(srcDir, src));
+            var dst = Path.Combine(outDir, src.Substring(srcRoot.Length));
             Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
             if (src.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { RecolorPng(src, dst); png++; }
             else File.Copy(src, dst);
@@ -50,8 +54,8 @@ static class ThemeGen
 
         string themeFile = Path.Combine(outDir, "ThemeFile");
         string xaml = RecolorText(File.ReadAllText(themeFile));
-        foreach (var (key, value) in CornerRadii)
-            xaml = SetKeyed(xaml, key, value);
+        foreach (var kv in CornerRadii)
+            xaml = SetKeyed(xaml, kv.Key, kv.Value);
         xaml = SetKeyed(xaml, "ThemeDisplayName", DisplayName);
         xaml = SetKeyed(xaml, "themeName", ThemeName);
         xaml = Regex.Replace(xaml, "RadiusX=\"0\"(\\s+)RadiusY=\"0\"(\\s+Rect=\"0,0,68,68\")", "RadiusX=\"14\"$1RadiusY=\"14\"$2");

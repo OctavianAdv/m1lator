@@ -7,6 +7,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <DebugType>none</DebugType>
+    <!-- prebuilt output is committed in <repo>\bin so any download works without building -->
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\</OutDir>
   </PropertyGroup>
 
   <ItemGroup>

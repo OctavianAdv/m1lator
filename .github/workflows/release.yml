@@ -1,10 +1,10 @@
 name: release
 
-# Push a tag like v1.0.0 -> builds the tools and publishes m1lator-<tag>.zip as a GitHub Release.
+# Push a tag like v1.0.2 -> publishes m1lator-<tag>.zip (prebuilt bin + scripts) as a GitHub Release.
+# Needs: Settings -> Actions -> General -> Workflow permissions -> "Read and write permissions".
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,30 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Build
+      - name: Package
         shell: pwsh
         run: |
           $out = 'dist/m1lator'
-          $publish = '-c', 'Release', '-r', 'win-x64', '--self-contained', '-p:PublishSingleFile=true', '-p:EnableCompressionInSingleFile=true', '-p:DebugType=none'
-          dotnet publish src/M1lator.Tool @publish -o "$out/bin"
-          if ($LASTEXITCODE) { exit 1 }
-          dotnet publish src/M1lator.ThemeGen @publish -o "$out/bin"
-          if ($LASTEXITCODE) { exit 1 }
-          dotnet build src/M1lator.Boost -c Release -o "$out/boost"
-          if ($LASTEXITCODE) { exit 1 }
-          Move-Item "$out/boost/M1lator.Boost.dll" "$out/bin/"
-          Remove-Item -Recurse "$out/boost"
-          Copy-Item -Recurse scripts "$out/scripts"
-          Copy-Item Install.bat, Uninstall.bat, README.md "$out/"
-          Get-ChildItem -Recurse $out | Select-Object FullName, Length
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item -Recurse bin, scripts $out
+          Copy-Item Install.bat, Uninstall.bat, README.md $out
           Compress-Archive -Path "$out/*" -DestinationPath "dist/m1lator-${{ github.ref_name }}.zip"
 
       - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: dist/*.zip
           generate_release_notes: true

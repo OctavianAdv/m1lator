@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using dnlib.DotNet.Writer;

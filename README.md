@@ -2,10 +2,11 @@
 
 Mod pentru **BlueStacks 4 (versiunea Nougat 64-bit, `bgp64`)**: temă nouă, FPS până la 1000, latență mai mică, fără telemetrie și reclame.
 
-## Instalare (3 pași)
+Nu trebuie să instalezi nimic în plus: nici .NET, nici altceva.
 
-1. Mergi la **[Releases](../../releases/latest)** și descarcă fișierul **`m1lator-vX.Y.Z.zip`** (~60 MB).
-   ⚠️ **NU** descărca „Source code (zip)”: acela nu conține programele.
+## Instalare
+
+1. Descarcă proiectul, în orice mod: **[Releases](../../releases/latest)** (oricare zip), sau butonul verde **Code → Download ZIP**.
 2. Click dreapta pe zip → **Extract All** (dezarhivează-l, nu rula direct din zip).
 3. Închide BlueStacks.
 4. Dublu-click pe **`Install.bat`** → apasă **Da** la fereastra Windows (drepturi de administrator) → așteaptă mesajul **GATA!**
@@ -52,7 +53,9 @@ Log: `C:\ProgramData\BlueStacks_bgp64\Logs\m1lator.log`
 - `src/M1lator.Tool`: aplică patch-urile IL pe fișierele originale (cu dnlib)
 - `src/M1lator.ThemeGen`: generează tema din tema originală BlueStacks
 - `src/M1lator.Boost`: optimizările de latență, încărcate în HD-Player
-- `scripts/`: instalare și dezinstalare. Din repo merg direct, dacă ai .NET 9 SDK.
+- `scripts/`: instalare și dezinstalare. Folosesc programele gata compilate din `bin/`.
+- `bin/`: programele compilate (.NET Framework 4.8, inclus în Windows). Sunt urcate pe git, ca orice download să meargă direct.
+  După ce modifici ceva în `src/`, rulează `dotnet build -c Release src/<proiect>` (actualizează `bin/`) și dă commit și la `bin/`.
 - Release nou: `git tag v1.2.3 && git push origin v1.2.3`. GitHub Actions face zip-ul și release-ul automat.
 
 Repo-ul nu conține fișiere BlueStacks. Totul se generează local, din instalarea ta.

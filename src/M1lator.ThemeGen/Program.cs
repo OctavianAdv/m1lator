@@ -1,4 +1,5 @@
-﻿using M1lator.ThemeGen;
+﻿using System;
+using M1lator.ThemeGen;
 
 // m1lator theme generator
 //   M1lator.ThemeGen <srcThemeDir> <outDir>   build the m1lator theme from a stock theme (Client\Assets)

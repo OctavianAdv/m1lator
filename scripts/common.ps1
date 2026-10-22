@@ -1,7 +1,5 @@
 # m1lator: shared paths and helpers, dot-sourced by every script.
-# Works in two layouts:
-#   release zip : <root>\bin\M1lator.Tool.exe, M1lator.ThemeGen.exe, M1lator.Boost.dll (prebuilt)
-#   git repo    : <root>\src\... (built on demand with the .NET SDK)
+# Tools live prebuilt in <root>\bin (rebuild with: dotnet build -c Release src\<project>).
 
 $ErrorActionPreference = 'Stop'
 $Root      = Split-Path $PSScriptRoot -Parent
@@ -45,28 +43,16 @@ function Stop-BlueStacks {
 
 # Returns @{ Tool = {..}; ThemeGen = {..}; Boost = <path> }; Tool/ThemeGen are scriptblocks taking args.
 function Get-M1latorTools {
+    # Prebuilt .NET Framework 4.8 tools are committed in <root>\bin: no SDK or runtime install needed.
     $bin = Join-Path $Root 'bin'
-    if (Test-Path (Join-Path $bin 'M1lator.Tool.exe')) {
-        return @{
-            Tool     = { & (Join-Path $bin 'M1lator.Tool.exe') @args }.GetNewClosure()
-            ThemeGen = { & (Join-Path $bin 'M1lator.ThemeGen.exe') @args }.GetNewClosure()
-            Boost    = Join-Path $bin 'M1lator.Boost.dll'
+    foreach ($f in 'M1lator.Tool.exe', 'M1lator.ThemeGen.exe', 'M1lator.Boost.dll', 'dnlib.dll') {
+        if (-not (Test-Path (Join-Path $bin $f))) {
+            throw "Lipseste bin\$f. Descarca din nou proiectul de pe GitHub (Code -> Download ZIP) si dezarhiveaza-l. / Missing bin\$f."
         }
     }
-    if (-not (Test-Path (Join-Path $Root 'src')) -or -not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-        throw ("Lipseste folderul 'bin' cu programele. Descarca fisierul m1lator-vX.Y.Z.zip de la Releases " +
-               "(NU 'Source code'), dezarhiveaza-l si ruleaza Install.bat de acolo. / " +
-               "Missing 'bin' folder: download m1lator-vX.Y.Z.zip from Releases, not 'Source code'.")
-    }
-    foreach ($p in 'M1lator.Boost', 'M1lator.Tool', 'M1lator.ThemeGen') {
-        dotnet build -c Release (Join-Path $Root "src\$p") | Out-Null
-        if ($LASTEXITCODE) { throw "build failed: $p" }
-    }
-    $toolDll  = Join-Path $Root 'src\M1lator.Tool\bin\Release\net9.0-windows\M1lator.Tool.dll'
-    $themeDll = Join-Path $Root 'src\M1lator.ThemeGen\bin\Release\net9.0-windows\M1lator.ThemeGen.dll'
     return @{
-        Tool     = { dotnet $toolDll @args }.GetNewClosure()
-        ThemeGen = { dotnet $themeDll @args }.GetNewClosure()
-        Boost    = Join-Path $Root 'src\M1lator.Boost\bin\Release\net40\M1lator.Boost.dll'
+        Tool     = { & (Join-Path $bin 'M1lator.Tool.exe') @args }.GetNewClosure()
+        ThemeGen = { & (Join-Path $bin 'M1lator.ThemeGen.exe') @args }.GetNewClosure()
+        Boost    = Join-Path $bin 'M1lator.Boost.dll'
     }
 }
