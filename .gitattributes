@@ -1,0 +1,5 @@
+# Windows scripts must keep CRLF in every download (Source code zip, Download ZIP, clone)
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.exe  binary
+*.dll  binary
