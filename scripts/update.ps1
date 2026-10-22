@@ -56,7 +56,7 @@ try {
         if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
         Copy-Item -Recurse (Join-Path $src.FullName $item) $dst
     }
-    foreach ($file in 'Install.bat', 'Uninstall.bat', 'Update.bat', 'README.md', 'VERSION') {
+    foreach ($file in 'Install.bat', 'Uninstall.bat', 'Update.bat', 'Hypervisor-Off.bat', 'Hypervisor-On.bat', 'README.md', 'VERSION') {
         $s = Join-Path $src.FullName $file
         if (Test-Path $s) { Copy-Item $s (Join-Path $Root $file) -Force }
     }

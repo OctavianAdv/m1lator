@@ -43,9 +43,16 @@ if (-not $SkipTheme) {
 }
 
 # ---------------------------------------------------------------- per-instance performance presets
+# vCPUs run inside HD-Player next to the renderer and input threads: leave 2 performance cores free for them
+$tools = Get-M1latorTools
+$pcores = [int]((& $tools.Tool pcores) | Select-Object -First 1)
+$vcpus = [Math]::Max(2, [Math]::Min(6, $pcores - 2))
+Write-Host "performance cores: $pcores -> $vcpus vCPUs per instance"
+
 foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     $g = "$BsKey\Guests\$vm"
     if (-not (Test-Path "$g\Config")) { continue }
+    Set-Reg "$g\Config" 'VCPUs' $vcpus
     Set-Reg "$g\Config" 'EnableHighFPS' 1
     Set-Reg "$g\Config" 'FPS' $Fps
     Set-Reg "$g\Config" 'ShowFPS' ([int][bool]$ShowFps)

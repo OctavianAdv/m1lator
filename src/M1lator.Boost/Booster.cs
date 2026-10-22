@@ -14,6 +14,7 @@ namespace M1lator.Boost
     ///   PCoresOnly       REG_DWORD 1 = schedule only on performance cores (hybrid CPUs)   (default 1)
     ///   TimerResolution  REG_DWORD 1 = request 1 ms system timer                          (default 1)
     ///   NoPowerThrottle  REG_DWORD 1 = opt out of EcoQoS / timer throttling               (default 1)
+    ///   MmcssInputThread REG_DWORD 1 = register the input/window thread with MMCSS "Games" (default 1)
     /// </summary>
     public static class Booster
     {
@@ -30,6 +31,8 @@ namespace M1lator.Boost
                     if (GetInt(key, "NoPowerThrottle", 1) == 1) Try("no power throttling", DisablePowerThrottling);
                     Try("priority", () => SetPriority(GetString(key, "Priority", "High")));
                     if (GetInt(key, "PCoresOnly", 1) == 1) Try("P-cores only", RestrictToPerformanceCores);
+                    // Apply() runs on HD-Player's main thread = the window/input message thread
+                    if (GetInt(key, "MmcssInputThread", 1) == 1) Try("MMCSS Games (input thread)", RegisterInputThreadWithMmcss);
                 }
             }
             catch (Exception ex)
@@ -43,6 +46,17 @@ namespace M1lator.Boost
         {
             try { Log.Add(name + ": " + (action() ? "ok" : "skipped")); }
             catch (Exception ex) { Log.Add(name + ": " + ex.GetType().Name + " " + ex.Message); }
+        }
+
+        // Multimedia Class Scheduler "Games" task: the thread is scheduled ahead of normal work while it is runnable.
+        // The handle is intentionally never reverted; it lives as long as the thread.
+        static bool RegisterInputThreadWithMmcss()
+        {
+            uint taskIndex = 0;
+            IntPtr h = AvSetMmThreadCharacteristics("Games", ref taskIndex);
+            if (h == IntPtr.Zero) return false;
+            AvSetMmThreadPriority(h, AVRT_PRIORITY_HIGH);
+            return true;
         }
 
         static bool SetPriority(string value)
@@ -138,6 +152,12 @@ namespace M1lator.Boost
             public uint ControlMask;
             public uint StateMask;
         }
+
+        const int AVRT_PRIORITY_HIGH = 1;
+        [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern IntPtr AvSetMmThreadCharacteristics(string taskName, ref uint taskIndex);
+        [DllImport("avrt.dll", SetLastError = true)]
+        static extern bool AvSetMmThreadPriority(IntPtr avrtHandle, int priority);
 
         [DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
         [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();

@@ -87,6 +87,10 @@ static class Patcher
         StubAll(m, "BlueStacks.Common.NotificationWindow", md => md.Name.String is "AddAlert" or "ForceShowAlert");
         Stub(Method(m, "BlueStacks.Common.RichNotificationPopup", "ShowWindow"));
         Stub(Method(m, "BlueStacks.Common.CustomToastPopupControl", "ShowPopup"));
+
+        // 5. Memory trimming: the client and HD-Agent force a loop every 15 s (blocking gen-2 GC + EmptyWorkingSet,
+        //    which pages the whole UI out -> input lag on the next click). The Android-side trim drops guest caches.
+        StubAll(m, "BlueStacks.Common.MemoryManager", md => md.Name.String is "TrimMemory" or "CheckAndTrimAndroidMemory");
     }
 
     // ---------------------------------------------------------------- Bluestacks.exe (client UI)

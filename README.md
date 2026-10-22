@@ -19,6 +19,12 @@ Pornește BlueStacks. Gata.
 
 Dublu-click pe **`Update.bat`**. Verifică dacă a apărut o versiune nouă pe GitHub; dacă da, o descarcă și o instalează singur.
 
+## Hyper-V / Memory Integrity (important)
+
+BlueStacks 4 **nu pornește** cât timp hypervisor-ul Windows e activ (Memory Integrity / Core Isolation, Hyper-V, WSL2). `Install.bat` te întreabă dacă vrei să-l oprești.
+Poți folosi și direct **`Hypervisor-Off.bat`**, iar ca să-l repornești, **`Hypervisor-On.bat`**. Ambele cer restart.
+Oprirea scade puțin securitatea Windows (protecția kernel-ului împotriva driverelor malițioase).
+
 ## Dezinstalare
 
 Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
@@ -33,7 +39,9 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Scurtături** | Toate oprite, mai puțin **F11** (fullscreen) |
 | **Notificări** | Toate oprite: popup-uri Windows, notificări din cloud, iconița de notificări (clopoțelul), mesajele „apasă F11 ca să ieși” |
 | **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. Implicit e 240. |
-| **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi) |
+| **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
+| **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere |
+| **Fără sacadări** | Oprită curățarea forțată a memoriei, care rula la fiecare 15 secunde și dădea lag în interfață |
 | **Randare** | OpenGL, decodare ASTC cu cache, GPU dedicat forțat |
 | **Fără telemetrie** | Toate statisticile trimise către cloud sunt oprite, la fel și scanarea proceselor (SecurityMetrics) |
 | **Fără reclame** | Promoții, recomandări și sfaturi oprite. Actualizările automate sunt blocate, ca să nu șteargă mod-ul. |
@@ -52,6 +60,7 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `TimerResolution` | DWORD | 1 | 0 = fără timer de 1 ms |
 | `NoPowerThrottle` | DWORD | 1 | 0 = lasă Windows să facă throttling |
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
+| `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
 
 Log: `C:\ProgramData\BlueStacks_bgp64\Logs\m1lator.log`
 
