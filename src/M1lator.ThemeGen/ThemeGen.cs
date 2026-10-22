@@ -9,34 +9,40 @@ using System.Text.RegularExpressions;
 namespace M1lator.ThemeGen;
 
 /// <summary>
-/// Builds the "m1lator Midnight" theme from the stock BlueStacks theme (Client\Assets):
-///  - navy backgrounds / greys  -> graphite neutrals with a faint violet tint
-///  - blue + orange accents     -> violet accent family
-///  - reds / greens / yellows   -> untouched (errors, success, warnings keep their meaning)
-/// The same colour transform is applied to the XAML ThemeFile, ThemeConfig.ini and every PNG,
-/// so icons and brushes stay consistent.
+/// Builds the "m1lator Dark" theme (Apple dark-mode style) from the stock BlueStacks theme (Client\Assets):
+///  - navy backgrounds / greys -> Apple graphite greys (#1C1C1E, #2C2C2E, #3A3A3C ...)
+///  - vivid colours            -> snapped to Apple system colours (blue accent #0A84FF, orange, red, green, yellow, purple)
+///  - corners                  -> larger, softer radii
+/// The same colour transform is applied to the XAML ThemeFile, ThemeConfig.ini and every PNG icon,
+/// so icons and brushes stay consistent. Photos/artwork are left untouched.
 /// </summary>
 static class ThemeGen
 {
     public const string ThemeName = "m1lator";
-    const string DisplayName = "m1lator Midnight";
+    const string DisplayName = "m1lator Dark";
 
-    const double NeutralHue = 248, NeutralSatScale = 0.30;
-    const double AccentHue = 262, HighlightHue = 280;
+    const double NeutralHue = 240, NeutralSat = 0.03;   // Apple greys carry a barely visible cool tint
     const int PhotoColorThreshold = 6000;
+
+    // Apple dark-mode system colours as (hue, saturation, lightness)
+    static readonly double[] SystemBlue = { 211, 1.00, 0.52 };    // #0A84FF
+    static readonly double[] SystemRed = { 3, 1.00, 0.61 };       // #FF453A
+    static readonly double[] SystemGreen = { 135, 0.64, 0.50 };   // #30D158
+    static readonly double[] SystemYellow = { 50, 1.00, 0.52 };   // #FFD60A
+    static readonly double[] SystemPurple = { 291, 0.86, 0.65 };  // #BF5AF2
 
     static readonly Dictionary<string, string> CornerRadii = new()
     {
-        ["BeginnerGuideRadius"] = "8,8,8,8",
-        ["ButtonCornerRadius"] = "6,6,6,6",
-        ["MessageWindowRadius"] = "8,8,8,8",
-        ["PopupRadius"] = "8,8,8,8",
-        ["PreferenceDropDownRadius"] = "6,6,6,6",
-        ["SettingsWindowRadius"] = "8,8,8,8",
-        ["SidebarElementCornerRadius"] = "6,6,6,6",
-        ["SpeedUpTipsRadius"] = "8,8,8,8",
-        ["TabRadius"] = "6,6,0,0",
-        ["TextBoxRadius"] = "6,6,6,6",
+        ["BeginnerGuideRadius"] = "12,12,12,12",
+        ["ButtonCornerRadius"] = "8,8,8,8",
+        ["MessageWindowRadius"] = "12,12,12,12",
+        ["PopupRadius"] = "12,12,12,12",
+        ["PreferenceDropDownRadius"] = "10,10,10,10",
+        ["SettingsWindowRadius"] = "12,12,12,12",
+        ["SidebarElementCornerRadius"] = "8,8,8,8",
+        ["SpeedUpTipsRadius"] = "12,12,12,12",
+        ["TabRadius"] = "8,8,0,0",
+        ["TextBoxRadius"] = "8,8,8,8",
     };
 
     public static int Run(string srcDir, string outDir)
@@ -58,7 +64,7 @@ static class ThemeGen
             xaml = SetKeyed(xaml, kv.Key, kv.Value);
         xaml = SetKeyed(xaml, "ThemeDisplayName", DisplayName);
         xaml = SetKeyed(xaml, "themeName", ThemeName);
-        xaml = Regex.Replace(xaml, "RadiusX=\"0\"(\\s+)RadiusY=\"0\"(\\s+Rect=\"0,0,68,68\")", "RadiusX=\"14\"$1RadiusY=\"14\"$2");
+        xaml = Regex.Replace(xaml, "RadiusX=\"0\"(\\s+)RadiusY=\"0\"(\\s+Rect=\"0,0,68,68\")", "RadiusX=\"15\"$1RadiusY=\"15\"$2"); // iOS icon corner ≈ 22% of 68px
         File.WriteAllText(themeFile, xaml);
 
         string ini = Path.Combine(outDir, "ThemeConfig.ini");
@@ -119,15 +125,27 @@ static class ThemeGen
         double r = ((argb >> 16) & 0xFF) / 255.0, g = ((argb >> 8) & 0xFF) / 255.0, b = (argb & 0xFF) / 255.0;
         RgbToHsl(r, g, b, out double h, out double s, out double l);
 
-        bool blue = h >= 180 && h <= 260;
-        bool orange = h >= 15 && h <= 50;
         bool vivid = s >= 0.45 && l > 0.25 && l < 0.85;
+        double[]? system = !vivid ? null
+            : h >= 180 && h < 260 ? SystemBlue
+            : h >= 15 && h < 48 ? SystemBlue   // stock orange is the selection highlight: Apple uses one accent
+            : h >= 48 && h < 75 ? SystemYellow
+            : h >= 75 && h < 180 ? SystemGreen
+            : h >= 260 && h < 330 ? SystemPurple
+            : SystemRed;
 
-        // accents get a lightness floor so text/links stay readable on the dark graphite background
-        if (vivid && blue) { h = AccentHue; s = Math.Max(s, 0.80); l = Math.Max(l, 0.62); }
-        else if (vivid && orange) { h = HighlightHue; s = Math.Max(s, 0.80); l = Math.Max(l, 0.62); }
-        else if (blue || s < 0.25) { h = NeutralHue; s *= NeutralSatScale; l = l < 0.5 ? l * 0.92 : l; }
-        else return argb; // reds, greens, yellows keep their meaning
+        if (system != null)
+        {
+            // snap to the Apple colour, keep a little of the original lightness so hover/pressed states stay distinct
+            h = system[0]; s = system[1];
+            l = Math.Min(Math.Max(system[2] + (l - 0.5) * 0.4, 0.40), 0.75);
+        }
+        else
+        {
+            // greys and navy backgrounds -> neutral Apple greys; darks are compressed toward #1C1C1E/#2C2C2E/#3A3A3C
+            h = NeutralHue; s = NeutralSat;
+            if (l < 0.5) l = l * 0.85 + 0.017;
+        }
 
         HslToRgb(h, s, l, out r, out g, out b);
         return (a << 24) | ((uint)Math.Round(r * 255) << 16) | ((uint)Math.Round(g * 255) << 8) | (uint)Math.Round(b * 255);

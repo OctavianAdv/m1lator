@@ -23,12 +23,14 @@ static class Patcher
         var boost = ModuleDefMD.Load(File.ReadAllBytes(boostDll));
         var applyMethod = boost.Find("M1lator.Boost.Booster", false)?.FindMethod("Apply")
             ?? throw new Exception("Booster.Apply not found in " + boostDll);
+        var stretchMethod = boost.Find("M1lator.Boost.Display", false)?.FindMethod("TryStretch")
+            ?? throw new Exception("Display.TryStretch not found in " + boostDll);
 
         foreach (var dir in new[] { "ProgramFiles", "Client" })
             PatchFile(originalDir, outDir, dir, "HD-Common.dll", PatchHdCommon);
         PatchFile(originalDir, outDir, "Client", "Bluestacks.exe", PatchClient);
         PatchFile(originalDir, outDir, "ProgramFiles", "HD-Agent.exe", PatchAgent);
-        PatchFile(originalDir, outDir, "ProgramFiles", "HD-Player.exe", m => PatchPlayer(m, applyMethod));
+        PatchFile(originalDir, outDir, "ProgramFiles", "HD-Player.exe", m => PatchPlayer(m, applyMethod, stretchMethod));
 
         File.Copy(boostDll, Path.Combine(outDir, "ProgramFiles", "M1lator.Boost.dll"), true);
         Console.WriteLine("all patches applied");
@@ -80,6 +82,11 @@ static class Patcher
         body.Instructions.Add(ret);
         download.Body = body;
         Console.WriteLine("  FeatureManager.DownloadFile -> local only");
+
+        // 4. Notifications: desktop popups (Android app + cloud), rich popups and in-window toasts never show
+        StubAll(m, "BlueStacks.Common.NotificationWindow", md => md.Name.String is "AddAlert" or "ForceShowAlert");
+        Stub(Method(m, "BlueStacks.Common.RichNotificationPopup", "ShowWindow"));
+        Stub(Method(m, "BlueStacks.Common.CustomToastPopupControl", "ShowPopup"));
     }
 
     // ---------------------------------------------------------------- Bluestacks.exe (client UI)
@@ -100,6 +107,11 @@ static class Patcher
 
         // SecurityMetrics: process blacklist scan + Root.vdi MD5 + daily cloud report
         Stub(Method(m, "BlueStacks.BlueStacksUI.SecurityMetrics", "Init"));
+
+        // Notifications: cloud pushes (ads, red dots, quit popups, remote method calls) and the
+        // "press F11 to exit full screen" toast
+        Stub(Method(m, "BlueStacks.BlueStacksUI.CloudNotificationManager", "HandleCloudNotification"));
+        Stub(Method(m, "BlueStacks.BlueStacksUI.MainWindow", "ToggleFullScreenToastVisibility"));
     }
 
     // ---------------------------------------------------------------- HD-Agent.exe
@@ -113,11 +125,28 @@ static class Patcher
 
     // ---------------------------------------------------------------- HD-Player.exe
 
-    static void PatchPlayer(ModuleDefMD m, MethodDef apply)
+    static void PatchPlayer(ModuleDefMD m, MethodDef apply, MethodDef tryStretch)
     {
         var main = Method(m, "BlueStacks.Player.Program", "Main");
         main.Body.Instructions.Insert(0, OpCodes.Call.ToInstruction(m.Import(apply)));
         Console.WriteLine("  Program.Main -> M1lator.Boost.Booster.Apply()");
+
+        // Fullscreen stretch: if (Display.TryStretch(VMWindow.Instance, ref mScaledDisplayArea)) return;
+        var layout = Type(m, "BlueStacks.Player.LayoutManager");
+        var fix = Method(layout, "FixupGuestDisplay_FixAspectRatio");
+        var area = layout.FindField("mScaledDisplayArea") ?? throw new Exception("LayoutManager.mScaledDisplayArea missing");
+        var instance = Type(m, "BlueStacks.Player.VMWindow").FindField("Instance") ?? throw new Exception("VMWindow.Instance missing");
+        var body = fix.Body.Instructions;
+        var original = body[0];
+        body.Insert(0, OpCodes.Ldsfld.ToInstruction(instance));
+        body.Insert(1, OpCodes.Ldsflda.ToInstruction(area));
+        body.Insert(2, OpCodes.Call.ToInstruction(m.Import(tryStretch)));
+        body.Insert(3, OpCodes.Brfalse.ToInstruction(original));
+        body.Insert(4, OpCodes.Ret.ToInstruction());
+        Console.WriteLine("  LayoutManager.FixupGuestDisplay_FixAspectRatio -> fullscreen stretch");
+
+        // "press F11 to exit full screen" toast drawn by the player itself
+        Stub(Method(m, "BlueStacks.Player.FullScreenToast", "Show"));
     }
 
     // ---------------------------------------------------------------- helpers

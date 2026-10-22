@@ -14,16 +14,22 @@ param(
     [switch]$SkipTheme
 )
 . "$PSScriptRoot\common.ps1"
+# needs admin (creates HKLM\...\m1lator). Parameters only apply when already started elevated.
+if (Invoke-Elevated $PSCommandPath) { return }
 New-Item -ItemType Directory -Force $BackupDir | Out-Null
 
 if (Get-Process -Name 'Bluestacks', 'HD-Player' -ErrorAction SilentlyContinue) {
     throw 'Inchide BlueStacks mai intai / Close BlueStacks first.'
 }
 
+# snapshot of every value we overwrite, saved after each change so an interrupted run never loses originals
 $backup = [ordered]@{}
+$snapshot = Join-Path $BackupDir "settings-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
+function Save-Snapshot { $backup | ConvertTo-Json | Set-Content $snapshot -Encoding UTF8 }
 function Set-Reg($path, $name, $value, $type = 'DWord') {
     $old = (Get-ItemProperty $path -Name $name -ErrorAction SilentlyContinue).$name
     $backup["$path|$name"] = $old
+    Save-Snapshot
     Set-ItemProperty -Path $path -Name $name -Value $value -Type $type
 }
 
@@ -53,6 +59,20 @@ foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     Write-Host "$vm : FPS=$Fps, high framerate mode on, ASTC=$AstcOption, OpenGL"
 }
 Set-Reg "$BsKey\Config" 'ForceDedicatedGPU' 1
+
+# ---------------------------------------------------------------- shortcuts: only fullscreen (F11)
+# BlueStacks loads UserDefinedShortcuts instead of DefaultShortcuts when it is set; anything missing is simply inactive
+$shortcuts = @{
+    Shortcut        = @(@{ ShortcutCategory = 'STRING_WINDOW_ACTIONS'; ShortcutName = 'STRING_UPDATED_FULLSCREEN_BUTTON_TOOLTIP'; ShortcutKey = 'F11' })
+    DefaultModifier = 'LeftCtrl,LeftShift'
+} | ConvertTo-Json -Depth 4
+Set-Reg "$BsKey\Config" 'UserDefinedShortcuts' $shortcuts 'String'
+Set-Reg "$BsKey\Client" 'BossKey' '' 'String'          # global hide-window hotkey off
+Write-Host 'shortcuts: only F11 (fullscreen)'
+
+# ---------------------------------------------------------------- fullscreen stretch (patched HD-Player reads this)
+if (-not (Test-Path "$BsKey\m1lator")) { New-Item "$BsKey\m1lator" | Out-Null }
+Set-Reg "$BsKey\m1lator" 'StretchFullscreen' 1
 Set-Reg "$BsKey\Config" 'UpdateBstConfig' 0      # keep our local bst_config instead of re-downloading
 
 # ---------------------------------------------------------------- UI label
@@ -60,6 +80,7 @@ $loc = Join-Path $DataDir 'Locales\i18n.en-US.txt'
 if (Test-Path $loc) {
     $text = [IO.File]::ReadAllText($loc)
     $backup['locale:STRING_ENABLE_HIGH_FPS'] = ([regex]::Match($text, '(?m)^STRING_ENABLE_HIGH_FPS = (.*)$').Groups[1].Value).TrimEnd("`r")
+    Save-Snapshot
     $text = [regex]::Replace($text, '(?m)^STRING_ENABLE_HIGH_FPS = .*?(\r?)$', 'STRING_ENABLE_HIGH_FPS = High framerate mode$1')
     [IO.File]::WriteAllText($loc, $text, (New-Object Text.UTF8Encoding $true))
 }
@@ -76,6 +97,8 @@ if (Test-Path $cfgPath) {
         IsTimelineStatsEnabled        = 'false'
         IsShowPostOTSScreen           = 'false'
         IsShowGamingSummaryPreference = 'false'
+        IsShowNotificationCentre      = 'false'   # bell icon + notification drawer
+        IsCustomResolutionInputAllowed = 'true'   # lets you type e.g. 1280x960 in Settings -> Display
     }
     foreach ($k in $flags.Keys) {
         $node = $cfg.FeatureManager.SelectSingleNode($k)
@@ -83,9 +106,8 @@ if (Test-Path $cfgPath) {
         $node.InnerText = $flags[$k]
     }
     $cfg.Save($cfgPath)
-    Write-Host 'promotions, recommendations, tips, timeline stats: off'
+    Write-Host 'promotions, recommendations, tips, timeline stats, notification centre: off'
 }
 
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$backup | ConvertTo-Json | Set-Content (Join-Path $BackupDir "settings-$stamp.json") -Encoding UTF8
-Write-Host "settings applied (backup: backup\settings-$stamp.json)"
+Save-Snapshot
+Write-Host "settings applied (backup: $snapshot)"

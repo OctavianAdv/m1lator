@@ -1,6 +1,6 @@
 name: release
 
-# Push a tag like v1.0.2 -> publishes m1lator-<tag>.zip (prebuilt bin + scripts) as a GitHub Release.
+# Push a tag like v1.2.0 (must match the VERSION file) -> publishes m1lator-<tag>.zip as a GitHub Release.
 # Needs: Settings -> Actions -> General -> Workflow permissions -> "Read and write permissions".
 on:
   push:
@@ -15,13 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check VERSION matches tag
+        shell: pwsh
+        run: |
+          $v = (Get-Content VERSION -Raw).Trim()
+          if ("v$v" -ne '${{ github.ref_name }}') { Write-Error "VERSION is $v but tag is ${{ github.ref_name }}"; exit 1 }
+
       - name: Package
         shell: pwsh
         run: |
           $out = 'dist/m1lator'
           New-Item -ItemType Directory -Force $out | Out-Null
           Copy-Item -Recurse bin, scripts $out
-          Copy-Item Install.bat, Uninstall.bat, README.md $out
+          Copy-Item Install.bat, Uninstall.bat, Update.bat, README.md, VERSION $out
           Compress-Archive -Path "$out/*" -DestinationPath "dist/m1lator-${{ github.ref_name }}.zip"
 
       - uses: softprops/action-gh-release@v2
