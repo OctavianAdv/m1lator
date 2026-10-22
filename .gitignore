@@ -23,3 +23,4 @@ src/*/obj/
 !/bin/M1lator.ThemeGen.exe.config
 !/bin/M1lator.Boost.dll
 !/bin/dnlib.dll
+!/bin/M1lator.Client.dll

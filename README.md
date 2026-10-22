@@ -40,6 +40,8 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | | |
 |---|---|
 | **Temă** | „m1lator Dark”, în stil Apple: gri închis neutru, accent albastru (#0A84FF), colțuri rotunjite |
+| **Branding** | Sus în stânga apare **M1LATOR** cu efect RGB animat (în loc de logo-ul și versiunea BlueStacks). În Setări → About apare versiunea m1lator. |
+| **Font** | Toată interfața folosește **Geist**. Logo-ul folosește **Space Grotesk**. Ambele fonturi sunt open source, cu licență OFL. |
 | **Pagina Home** | Pagina proprie în stil macOS: doar **Library** (aplicațiile tale), cu căutare. **Game center** e scos de tot: fără magazin din cloud, fără reclame, se încarcă instant. |
 | **Fullscreen** | La F11, imaginea umple tot ecranul, fără benzi negre. Ex.: dacă joci la **1280x960** (4:3), se întinde pe tot monitorul 16:9. Click-urile și tastele rămân la locul lor. |
 | **Rezoluție** | Poți scrie orice rezoluție: Setări → Display → Custom (de ex. 1280x960) |
@@ -71,6 +73,7 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `NoPowerThrottle` | DWORD | 1 | 0 = lasă Windows să facă throttling |
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
 | `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
+| `Font` | text | `Geist` | Fontul interfeței: `Geist`, `Space Grotesk` sau `System` (fontul Windows) |
 | `ResetFpsOnExit` | DWORD | 1 | 0 = FPS și High framerate mode rămân cum le-ai lăsat la închidere |
 | `FpsOnExit` | DWORD | 30 | FPS-ul setat la închiderea emulatorului |
 

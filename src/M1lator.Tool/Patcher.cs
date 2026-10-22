@@ -25,14 +25,18 @@ static class Patcher
             ?? throw new Exception("Booster.Apply not found in " + boostDll);
         var stretchMethod = boost.Find("M1lator.Boost.Display", false)?.FindMethod("TryStretch")
             ?? throw new Exception("Display.TryStretch not found in " + boostDll);
+        string clientDll = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(boostDll))!, "M1lator.Client.dll");
+        var brand = ModuleDefMD.Load(File.ReadAllBytes(clientDll)).Find("M1lator.Client.Brand", false)
+            ?? throw new Exception("M1lator.Client.Brand not found in " + clientDll);
 
         foreach (var dir in new[] { "ProgramFiles", "Client" })
             PatchFile(originalDir, outDir, dir, "HD-Common.dll", PatchHdCommon);
-        PatchFile(originalDir, outDir, "Client", "Bluestacks.exe", PatchClient);
+        PatchFile(originalDir, outDir, "Client", "Bluestacks.exe", m => PatchClient(m, brand));
         PatchFile(originalDir, outDir, "ProgramFiles", "HD-Agent.exe", PatchAgent);
         PatchFile(originalDir, outDir, "ProgramFiles", "HD-Player.exe", m => PatchPlayer(m, applyMethod, stretchMethod));
 
         File.Copy(boostDll, Path.Combine(outDir, "ProgramFiles", "M1lator.Boost.dll"), true);
+        File.Copy(clientDll, Path.Combine(outDir, "Client", "M1lator.Client.dll"), true);
         Console.WriteLine("all patches applied");
         return 0;
     }
@@ -96,8 +100,15 @@ static class Patcher
 
     // ---------------------------------------------------------------- Bluestacks.exe (client UI)
 
-    static void PatchClient(ModuleDefMD m)
+    static void PatchClient(ModuleDefMD m, TypeDef brand)
     {
+        // Branding (M1lator.Client.dll next to Bluestacks.exe): global font, RGB "M1LATOR" top bar, m1lator version in About
+        var main = Method(m, "BlueStacks.BlueStacksUI.App", "Main");
+        main.Body.Instructions.Insert(0, OpCodes.Call.ToInstruction(m.Import(brand.FindMethod("Init"))));
+        CallAtEndOfConstructor(m, "BlueStacks.BlueStacksUI.TopBar", m.Import(brand.FindMethod("ApplyTopBar")));
+        CallAtEndOfConstructor(m, "BlueStacks.BlueStacksUI.AboutSettingsControl", m.Import(brand.FindMethod("ApplyAbout")));
+        Console.WriteLine("  branding: font, M1LATOR top bar, About version");
+
         StubAll(m, "BlueStacks.BlueStacksUI.ClientStats", md => md.Name.StartsWith("Send"));
 
         // Updater: always report "no update" (blocks forced silent 'hard' updates that would wipe the mod)
@@ -143,6 +154,23 @@ static class Patcher
         foreach (var x in local) ins.Insert(at++, new Instruction(x.OpCode, x.Operand));
         ins.Insert(at, OpCodes.Ret.ToInstruction());
         Console.WriteLine("  BlueStacksUIUtils.GetHtmlHomeUrl -> local m1lator home");
+    }
+
+    // Inserts `hook(this)` before every `ret` of the type's (single) instance constructor.
+    static void CallAtEndOfConstructor(ModuleDef m, string type, IMethod hook)
+    {
+        var ctors = Type(m, type).Methods.Where(x => x.IsInstanceConstructor).ToList();
+        Expect(ctors.Count == 1, type + " constructor");
+        var ins = ctors[0].Body.Instructions;
+        foreach (var r in ins.Where(i => i.OpCode == OpCodes.Ret).ToList())
+        {
+            // reuse the ret instruction as `ldarg.0` so branches that targeted it still run the hook
+            r.OpCode = OpCodes.Ldarg_0;
+            r.Operand = null;
+            int at = ins.IndexOf(r) + 1;
+            ins.Insert(at, OpCodes.Call.ToInstruction(hook));
+            ins.Insert(at + 1, OpCodes.Ret.ToInstruction());
+        }
     }
 
     // The method a module already calls for a given type/name (e.g. a cross-assembly property getter).

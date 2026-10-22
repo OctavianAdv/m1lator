@@ -42,6 +42,18 @@ if (-not $SkipTheme) {
     Set-Reg "$BsKey\Client" 'ClientThemeName' 'm1lator' 'String'
 }
 
+# ---------------------------------------------------------------- fonts + branding (read by M1lator.Client.dll)
+$fontDst = Join-Path $Client 'm1lator-fonts'
+if (Test-Path $fontDst) { Remove-Item -Recurse -Force $fontDst }
+Copy-Item -Recurse (Join-Path $PSScriptRoot 'fonts') $fontDst
+if (-not (Test-Path "$BsKey\m1lator")) { New-Item "$BsKey\m1lator" | Out-Null }
+$version = if (Test-Path (Join-Path $Root 'VERSION')) { (Get-Content (Join-Path $Root 'VERSION') -Raw).Trim() } else { '' }
+Set-ItemProperty "$BsKey\m1lator" -Name 'Version' -Value $version -Type String
+if (-not (Get-ItemProperty "$BsKey\m1lator" -Name 'Font' -ErrorAction SilentlyContinue)) {
+    Set-ItemProperty "$BsKey\m1lator" -Name 'Font' -Value 'Geist' -Type String   # keep a font the user picked
+}
+Write-Host "branding: Geist font, RGB M1LATOR title, m1lator $version in About"
+
 # ---------------------------------------------------------------- home page (Library only, no Game center)
 # BlueStacks' own JS bridge/images/translations come from the local install; our page + style go on top.
 # The patched client loads Client\m1lator-home\index.html instead of the cloud home when it exists.

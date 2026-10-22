@@ -1,5 +1,5 @@
 <#
-  m1lator: restore the pristine BlueStacks binaries from backup\original\ and remove M1lator.Boost.dll.
+  m1lator: restore the pristine BlueStacks binaries from backup\original\ and remove M1lator.Boost.dll / M1lator.Client.dll.
   Needs admin (one UAC prompt).
 #>
 . "$PSScriptRoot\common.ps1"
@@ -12,3 +12,4 @@ Stop-BlueStacks
 Get-ChildItem "$Orig\ProgramFiles" | ForEach-Object { Copy-Item $_.FullName (Join-Path $PF $_.Name) -Force; Write-Host "restored: ProgramFiles\$($_.Name)" }
 Get-ChildItem "$Orig\Client"       | ForEach-Object { Copy-Item $_.FullName (Join-Path $Client $_.Name) -Force; Write-Host "restored: Client\$($_.Name)" }
 Remove-Item (Join-Path $PF 'M1lator.Boost.dll') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $Client 'M1lator.Client.dll') -ErrorAction SilentlyContinue

@@ -1,4 +1,10 @@
 /* m1lator home - macOS dark mode style */
+/* Geist from Client\m1lator-fonts (installed next to this folder) */
+@font-face { font-family: "Geist"; font-weight: 400; src: url("../m1lator-fonts/Geist-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 500; src: url("../m1lator-fonts/Geist-Medium.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 600; src: url("../m1lator-fonts/Geist-SemiBold.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 700; src: url("../m1lator-fonts/Geist-Bold.ttf") format("truetype"); }
+
 :root {
   --bg: #1c1c1e;
   --bg-elevated: #2c2c2e;
@@ -11,7 +17,7 @@
   --red: #ff453a;
   --green: #30d158;
   --radius-icon: 18px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

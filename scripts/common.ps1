@@ -45,7 +45,7 @@ function Stop-BlueStacks {
 function Get-M1latorTools {
     # Prebuilt .NET Framework 4.8 tools are committed in <root>\bin: no SDK or runtime install needed.
     $bin = Join-Path $Root 'bin'
-    foreach ($f in 'M1lator.Tool.exe', 'M1lator.ThemeGen.exe', 'M1lator.Boost.dll', 'dnlib.dll') {
+    foreach ($f in 'M1lator.Tool.exe', 'M1lator.ThemeGen.exe', 'M1lator.Boost.dll', 'M1lator.Client.dll', 'dnlib.dll') {
         if (-not (Test-Path (Join-Path $bin $f))) {
             throw "Lipseste bin\$f. Descarca din nou proiectul de pe GitHub (Code -> Download ZIP) si dezarhiveaza-l. / Missing bin\$f."
         }

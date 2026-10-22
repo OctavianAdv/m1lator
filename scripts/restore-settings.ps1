@@ -29,7 +29,7 @@ foreach ($name in $original.Keys) {
     else { Set-ItemProperty $path -Name $prop -Value $value }
 }
 if (Test-Path "$BackupDir\bst_config.orig") { Copy-Item "$BackupDir\bst_config.orig" (Join-Path $Client 'bst_config') -Force }
-foreach ($dir in 'm1lator', 'm1lator-home') {
+foreach ($dir in 'm1lator', 'm1lator-home', 'm1lator-fonts') {
     $p = Join-Path $Client $dir
     if (Test-Path $p) { Remove-Item -Recurse -Force $p }
 }
