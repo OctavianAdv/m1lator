@@ -9,9 +9,12 @@
 - `Locales\i18n.en-US.txt`: `STRING_ENABLE_HIGH_FPS` → "High framerate mode"
 - `Client\bst_config`: promotions, app recommendations, speed-up tips, timeline stats, post-OTS screen and gaming summary all off
 
-## Written, not yet built or installed (waiting on approval)
-`src/M1lator.Tool` (dnlib IL patcher) + `src/M1lator.Boost` (built):
+## Installed (scripts/install-patches.ps1, admin, reversible with scripts/uninstall-patches.ps1)
+Pristine signed originals are in `backup/original/` (git-ignored). `src/M1lator.Tool` (dnlib IL patcher) + `src/M1lator.Boost`:
 - HD-Common: high-FPS slider max 240 → 1000; cloud `Stats.Send*` stubbed; bst_config never re-downloaded
 - Bluestacks.exe: `ClientStats.Send*` stubbed, updater always says "no update", `SecurityMetrics.Init` stubbed
 - HD-Agent: cloud announcements (remote download+run, silent log upload) stubbed
 - HD-Player: `Booster.Apply()` at startup → 1 ms timer, no EcoQoS throttling, High priority, P-core-only CPU sets
+
+Not yet verified in a running BlueStacks. Check `C:\ProgramData\BlueStacks_bgp64\Logs\m1lator.log` after the first launch.
+Boost options: `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` → `Priority` (High/AboveNormal/Normal), `PCoresOnly`, `TimerResolution`, `NoPowerThrottle`.
