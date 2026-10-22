@@ -1,6 +1,6 @@
 <#
   m1lator: install the IL patches (HD-Common x2, Bluestacks.exe, HD-Agent.exe, HD-Player.exe, M1lator.Boost.dll).
-  - first run backs up the pristine signed files to backup\original\ (never overwritten afterwards)
+  - first run backs up the pristine signed files to C:\ProgramData\m1lator\backup\original\ (never overwritten afterwards)
   - patches are always rebuilt from those pristine copies, so re-running is safe
   - needs admin (one UAC prompt). Undo with uninstall-patches.ps1.
 #>

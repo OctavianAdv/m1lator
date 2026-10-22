@@ -7,9 +7,21 @@ $ErrorActionPreference = 'Stop'
 $Root      = Split-Path $PSScriptRoot -Parent
 $BsKey     = 'HKLM:\SOFTWARE\BlueStacks_bgp64'
 $PF        = 'C:\Program Files\BlueStacks_bgp64'
-$BackupDir = Join-Path $Root 'backup'
+# Fixed location so uninstall works from any copy of the folder (and survives deleting it)
+$BackupDir = Join-Path $env:ProgramData 'm1lator\backup'
 
+# Running straight from inside a zip: Explorer extracts to a temp folder that disappears afterwards
+if ($Root -like "$env:TEMP*" -or $Root -match '\\Temp\d*_[^\\]*\.zip') {
+    throw 'Dezarhiveaza mai intai zip-ul (click dreapta -> Extract All), apoi ruleaza Install.bat din folderul dezarhivat. / Extract the zip first.'
+}
 if (-not (Test-Path "$BsKey\Client")) { throw 'BlueStacks 4 (bgp64) nu este instalat / is not installed.' }
+
+# One-time move of backups made by older versions (kept next to the scripts)
+$legacyBackup = Join-Path $Root 'backup'
+if ((Test-Path $legacyBackup) -and -not (Test-Path $BackupDir)) {
+    New-Item -ItemType Directory -Force (Split-Path $BackupDir) | Out-Null
+    Copy-Item -Recurse $legacyBackup $BackupDir
+}
 $Client  = (Get-ItemProperty "$BsKey\Client").ClientInstallDir
 $DataDir = Split-Path $Client -Parent
 
@@ -40,6 +52,11 @@ function Get-M1latorTools {
             ThemeGen = { & (Join-Path $bin 'M1lator.ThemeGen.exe') @args }.GetNewClosure()
             Boost    = Join-Path $bin 'M1lator.Boost.dll'
         }
+    }
+    if (-not (Test-Path (Join-Path $Root 'src')) -or -not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw ("Lipseste folderul 'bin' cu programele. Descarca fisierul m1lator-vX.Y.Z.zip de la Releases " +
+               "(NU 'Source code'), dezarhiveaza-l si ruleaza Install.bat de acolo. / " +
+               "Missing 'bin' folder: download m1lator-vX.Y.Z.zip from Releases, not 'Source code'.")
     }
     foreach ($p in 'M1lator.Boost', 'M1lator.Tool', 'M1lator.ThemeGen') {
         dotnet build -c Release (Join-Path $Root "src\$p") | Out-Null

@@ -4,13 +4,15 @@ Mod pentru **BlueStacks 4 (versiunea Nougat 64-bit, `bgp64`)**: temă nouă, FPS
 
 ## Instalare (3 pași)
 
-1. Descarcă `m1lator-vX.Y.Z.zip` de la **[Releases](../../releases/latest)** și dezarhivează-l oriunde (de ex. pe Desktop).
-2. Închide BlueStacks.
-3. Dublu-click pe **`Install.bat`** → apasă **Da** la fereastra Windows (drepturi de administrator) → așteaptă mesajul **GATA!**
+1. Mergi la **[Releases](../../releases/latest)** și descarcă fișierul **`m1lator-vX.Y.Z.zip`** (~60 MB).
+   ⚠️ **NU** descărca „Source code (zip)”: acela nu conține programele.
+2. Click dreapta pe zip → **Extract All** (dezarhivează-l, nu rula direct din zip).
+3. Închide BlueStacks.
+4. Dublu-click pe **`Install.bat`** → apasă **Da** la fereastra Windows (drepturi de administrator) → așteaptă mesajul **GATA!**
 
 Pornește BlueStacks. Gata.
 
-> Nu șterge folderul după instalare. Folderul `backup` din el conține fișierele originale, necesare pentru dezinstalare.
+> Fișierele originale se salvează automat în `C:\ProgramData\m1lator\backup`. Poți șterge folderul descărcat după instalare.
 
 ## Dezinstalare
 
