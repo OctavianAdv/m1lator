@@ -1,0 +1,172 @@
+/* m1lator home - macOS dark mode style */
+:root {
+  --bg: #1c1c1e;
+  --bg-elevated: #2c2c2e;
+  --bg-elevated-2: #3a3a3c;
+  --separator: rgba(84, 84, 88, 0.55);
+  --label: #f5f5f7;
+  --label-2: rgba(235, 235, 245, 0.6);
+  --label-3: rgba(235, 235, 245, 0.3);
+  --accent: #0a84ff;
+  --red: #ff453a;
+  --green: #30d158;
+  --radius-icon: 18px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--label);
+  font-family: var(--font);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+ul { list-style: none; }
+button { font-family: inherit; border: 0; background: none; color: inherit; cursor: pointer; }
+.pointer { cursor: pointer; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.container { height: 100%; display: flex; flex-direction: column; }
+
+/* ---------- toolbar ---------- */
+.toolbar {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 28px 36px 18px;
+}
+.titles h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.subtitle { margin-top: 2px; color: var(--label-2); font-size: 13px; }
+.actions { display: flex; align-items: center; }
+.actions > * { margin-left: 8px; }
+
+.search {
+  display: flex; align-items: center;
+  width: 220px; height: 30px; padding: 0 10px;
+  background: var(--bg-elevated); border-radius: 8px; color: var(--label-2);
+  transition: box-shadow .15s;
+}
+.search:focus-within { box-shadow: 0 0 0 3px rgba(10, 132, 255, .45); }
+.search svg { width: 14px; height: 14px; flex: none; margin-right: 6px; }
+.search input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: none;
+  color: var(--label); font: inherit; font-size: 13px;
+}
+.search input::placeholder { color: var(--label-3); }
+
+.iconButton {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px; color: var(--label-2); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.iconButton:hover { background: var(--bg-elevated); color: var(--label); }
+
+/* "..." menu */
+.menuOptionsContainer { display: none; }
+.menuOptionsContainer .transparentBg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; }
+.optionsList {
+  position: absolute; right: 0; top: 36px; z-index: 11; min-width: 180px; padding: 5px;
+  background: rgba(44, 44, 46, .98);
+  border: 1px solid var(--separator); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.optionsList li { padding: 6px 10px; border-radius: 6px; color: var(--label); font-size: 13px; white-space: nowrap; }
+.optionsList li:hover { background: var(--accent); color: #fff; }
+
+/* ---------- app grid ---------- */
+.contentSection { flex: 1; overflow-y: auto; padding: 4px 36px 36px; }
+.contentSection::-webkit-scrollbar { width: 8px; }
+.contentSection::-webkit-scrollbar-thumb { background: var(--bg-elevated-2); border-radius: 4px; }
+
+#library { display: flex; flex-wrap: wrap; align-content: flex-start; }
+.gameList { display: flex; flex-wrap: wrap; }
+#installedApps { margin-right: 0; }
+.gameList li { position: relative; width: 92px; margin: 0 22px 26px 0; text-align: center; }
+
+.installedGame {
+  position: relative; width: 76px; height: 76px; margin: 0 auto;
+  border-radius: var(--radius-icon); overflow: hidden; background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .28);
+  transition: transform .18s cubic-bezier(.2, .8, .2, 1), box-shadow .18s;
+}
+.installedGame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gameList li:hover .installedGame { transform: scale(1.06); box-shadow: 0 2px 4px rgba(0,0,0,.4), 0 10px 24px rgba(0,0,0,.4); }
+.gameList li:active .installedGame { transform: scale(.97); }
+
+.installedGame.folder {
+  display: grid; grid-template-columns: 1fr 1fr; grid-gap: 6px; padding: 10px;
+  background: rgba(118, 118, 128, .24);
+}
+.installedGame.folder img { border-radius: 6px; }
+
+.gameName {
+  margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--label);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.installText { justify-content: center; margin-top: 2px; font-size: 11px; color: var(--label-2); display: flex; align-items: center; }
+.installIndicator { margin-right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* per-app states driven by index.js */
+.deleteButton {
+  display: none; position: absolute; top: 4px; right: 4px; z-index: 3;
+  padding: 2px 7px; border-radius: 10px; background: var(--red); color: #fff; font-size: 10px; font-weight: 600;
+}
+.installLoader, .installFailed, .downloadProgress { display: none; }
+.installLoader.show, .installFailed.show, .downloadProgress.show {
+  display: flex; position: absolute; top: 0; right: 0; bottom: 0; left: 0; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .55);
+}
+.installLoader.show::after {
+  content: ""; width: 22px; height: 22px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.25); border-top-color: #fff; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.installFailed.show { flex-direction: column; cursor: pointer; }
+.retryIcon::before { content: "\21BB"; font-size: 18px; color: #fff; }
+.retryText { font-size: 10px; color: #fff; }
+.downloadProgress.show { align-items: flex-end; padding: 8px; }
+.outerProgress { width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,.25); overflow: hidden; }
+.innerProgress { height: 100%; background: var(--accent); border-radius: 2px; transition: width .2s; }
+
+.empty { display: none; width: 100%; padding: 40px 0; text-align: center; color: var(--label-2); font-size: 14px; }
+
+/* ---------- sheet (system apps) ---------- */
+.modalContainer {
+  display: none; position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 20; align-items: center; justify-content: center;
+}
+.modalContainer .transparentBg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, .45); }
+.folderPopup {
+  position: relative; padding: 18px 24px 26px; min-width: 460px;
+  background: rgba(44, 44, 46, .98);
+  border: 1px solid var(--separator); border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  animation: pop .18s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheetHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.sheetHeader p { font-size: 15px; font-weight: 600; }
+.closeButton { width: 26px; height: 26px; border-radius: 50%; background: var(--bg-elevated-2); color: var(--label-2); display: flex; align-items: center; justify-content: center; }
+.closeButton svg { width: 12px; height: 12px; }
+.closeButton:hover { color: var(--label); }
+
+/* ---------- alert (delete) ---------- */
+.deleteOverlay { display: none; position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2; }
+.uninstallPopup {
+  display: none; position: fixed; z-index: 30; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 290px; padding: 20px 16px 16px; text-align: center;
+  background: rgba(44, 44, 46, .98);
+  border: 1px solid var(--separator); border-radius: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+.alertTitle { font-size: 14px; font-weight: 700; }
+.alertText { margin: 6px 0 16px; font-size: 12px; line-height: 1.4; color: var(--label-2); }
+.alertButtons { display: flex; }
+.alertButtons button + button { margin-left: 8px; }
+.alertButtons button { flex: 1; height: 30px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.whiteButton { background: var(--bg-elevated-2); color: var(--label); }
+.warningButton { background: var(--red); color: #fff; }
+.whiteButton:hover { filter: brightness(1.15); }
+.warningButton:hover { filter: brightness(1.1); }

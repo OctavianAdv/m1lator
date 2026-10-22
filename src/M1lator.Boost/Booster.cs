@@ -34,6 +34,8 @@ namespace M1lator.Boost
                     // Apply() runs on HD-Player's main thread = the window/input message thread
                     if (GetInt(key, "MmcssInputThread", 1) == 1) Try("MMCSS Games (input thread)", RegisterInputThreadWithMmcss);
                 }
+                // runs before the VM boots, so Android starts with a refresh rate games can divide evenly
+                Try("guest refresh rate", NormalizeGuestFps);
             }
             catch (Exception ex)
             {
@@ -46,6 +48,37 @@ namespace M1lator.Boost
         {
             try { Log.Add(name + ": " + (action() ? "ok" : "skipped")); }
             catch (Exception ex) { Log.Add(name + ": " + ex.GetType().Name + " " + ex.Message); }
+        }
+
+        /// <summary>Android display refresh rate as games need it: &lt;60 unchanged, else a multiple of 60, max 240.</summary>
+        public static int SnapFps(int v) => v < 60 ? v : Math.Min(v, 240) / 60 * 60;
+
+        // HD-Player is started as "HD-Player.exe <vmName> ..."; fix FPS + the fps= boot parameter of that instance
+        static bool NormalizeGuestFps()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length < 2 || args[1].IndexOfAny(new[] { '\\', '/', '"' }) >= 0) return false;
+            string guest = @"SOFTWARE\BlueStacks_bgp64\Guests\" + args[1];
+            bool changed = false;
+            using (var cfg = Registry.LocalMachine.OpenSubKey(guest + @"\Config", true))
+            {
+                if (cfg != null && cfg.GetValue("FPS") is int fps && SnapFps(fps) != fps)
+                {
+                    cfg.SetValue("FPS", SnapFps(fps), RegistryValueKind.DWord);
+                    Log.Add("FPS " + fps + " -> " + SnapFps(fps));
+                    changed = true;
+                }
+            }
+            using (var vm = Registry.LocalMachine.OpenSubKey(guest, true))
+            {
+                if (vm != null && vm.GetValue("BootParameters") is string bp)
+                {
+                    string fixedBp = System.Text.RegularExpressions.Regex.Replace(bp, @"(^| )fps=(\d+)",
+                        m => m.Groups[1].Value + "fps=" + SnapFps(int.Parse(m.Groups[2].Value)));
+                    if (fixedBp != bp) { vm.SetValue("BootParameters", fixedBp, RegistryValueKind.String); changed = true; }
+                }
+            }
+            return changed;
         }
 
         // Multimedia Class Scheduler "Games" task: the thread is scheduled ahead of normal work while it is runnable.

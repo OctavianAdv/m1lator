@@ -8,7 +8,7 @@
   so restore-settings.ps1 can put things back.
 #>
 param(
-    [int]$Fps = 240,             # default cap per instance; the slider goes to 1000 once patches are installed
+    [int]$Fps = 0,               # Android refresh rate; 0 = auto from the monitor (multiple of 60, max 240)
     [switch]$ShowFps,            # native FPS overlay
     [int]$AstcOption = -1,       # -1 auto (3 if GPU supports it, else 2), 0 off, 1 software, 2 software+cache, 3 hardware
     [switch]$SkipTheme
@@ -42,9 +42,29 @@ if (-not $SkipTheme) {
     Set-Reg "$BsKey\Client" 'ClientThemeName' 'm1lator' 'String'
 }
 
+# ---------------------------------------------------------------- home page (Library only, no Game center)
+# BlueStacks' own JS bridge/images/translations come from the local install; our page + style go on top.
+# The patched client loads Client\m1lator-home\index.html instead of the cloud home when it exists.
+$offline = Join-Path $Client 'OfflineHtmlHome'
+$homeDst = Join-Path $Client 'm1lator-home'
+if (Test-Path "$offline\js\index.js") {
+    if (Test-Path $homeDst) { Remove-Item -Recurse -Force $homeDst }
+    New-Item -ItemType Directory $homeDst | Out-Null
+    foreach ($d in 'js', 'images', 'localization') { Copy-Item -Recurse (Join-Path $offline $d) $homeDst }
+    Copy-Item (Join-Path $PSScriptRoot 'home\*') $homeDst -Force    # lives under scripts\ so every updater version ships it
+    Write-Host 'home: Library only (Game center off)'
+}
+
 # ---------------------------------------------------------------- per-instance performance presets
 # vCPUs run inside HD-Player next to the renderer and input threads: leave 2 performance cores free for them
 $tools = Get-M1latorTools
+# FPS = Android's display refresh rate. Default: the monitor's refresh rate as a multiple of 60 (games divide
+# it evenly: 30/60 FPS caps stay exact), max 240 - e.g. 239 Hz -> 240, 144 Hz -> 120, 60 Hz -> 60.
+if ($Fps -le 0) {
+    $hz = (Get-CimInstance Win32_VideoController | Measure-Object CurrentRefreshRate -Maximum).Maximum
+    if (-not $hz -or $hz -lt 60) { $hz = 60 }
+    $Fps = [Math]::Min(240, [Math]::Floor(($hz + 5) / 60) * 60)
+}
 $pcores = [int]((& $tools.Tool pcores) | Select-Object -First 1)
 $vcpus = [Math]::Max(2, [Math]::Min(6, $pcores - 2))
 Write-Host "performance cores: $pcores -> $vcpus vCPUs per instance"
@@ -118,6 +138,7 @@ if (Test-Path $cfgPath) {
         IsShowPostOTSScreen           = 'false'
         IsShowGamingSummaryPreference = 'false'
         IsShowNotificationCentre      = 'false'   # bell icon + notification drawer
+        IsAppCenterTabVisible         = 'false'   # App Center / Game center tab
         IsCustomResolutionInputAllowed = 'true'   # lets you type e.g. 1280x960 in Settings -> Display
     }
     foreach ($k in $flags.Keys) {

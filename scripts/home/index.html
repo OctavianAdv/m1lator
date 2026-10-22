@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  m1lator home: replaces BlueStacks' cloud home (Library + Game center) with a local Library-only page.
+  At install time BlueStacks' own js/, images/ and localization/ are copied next to this file from
+  Client\OfflineHtmlHome; js/index.js drives the app list, so the ids/classes below must stay as they are.
+-->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Library</title>
+  <link rel="stylesheet" type="text/css" href="home.css" />
+  <script type="text/javascript">window._arabica = {};</script>
+  <script type="text/javascript" src="js/jquery.min.js"></script>
+  <script type="text/javascript" src="js/gmApi.js"></script>
+  <script type="text/javascript" src="js/utils.js"></script>
+  <script type="text/javascript">_arabica.host = "";</script>
+  <script type="text/javascript" src="localization/index.js"></script>
+  <script type="text/javascript" src="js/localize.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+  <script type="text/javascript" src="home.js"></script>
+</head>
+
+<body>
+  <div class="container library">
+    <header class="toolbar">
+      <div class="titles">
+        <h1 data-str-id="library"></h1>
+        <p class="subtitle"><span data-str-id="allInstalled"></span> &middot; <span id="appCount">0</span></p>
+      </div>
+      <div class="actions">
+        <label class="search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" /></svg>
+          <input id="searchBox" type="text" data-str-id="search" autocomplete="off" spellcheck="false" />
+        </label>
+        <button class="iconButton" title="Install APK" onclick="installApk(event)">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        </button>
+        <span class="menuOptions iconButton" onclick="showMenuOptions();">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></svg>
+          <div class="menuOptionsContainer">
+            <div class="transparentBg" onclick="hideMenuOptions(event);"></div>
+            <ul class="optionsList">
+              <li data-str-id="installApk" onclick="installApk(event);"></li>
+              <li data-str-id="deleteApps" onclick="deleteApps(event);"></li>
+              <li data-str-id="reload" onclick="hideMenuOptions(event); refreshhomehtml();"></li>
+            </ul>
+          </div>
+        </span>
+      </div>
+    </header>
+
+    <main class="contentSection">
+      <div id="library" class="tab">
+        <ul class="gameList" id="installedApps">
+          <li class="pointer" onclick="handleClick('playStore')">
+            <div class="installedGame"><img src="./images/googlePlayStore.png" alt="" /></div>
+            <p class="gameName">Google Play Store</p>
+          </li>
+        </ul>
+        <ul class="gameList bsApps">
+          <li class="pointer" onclick="openSystemApps();">
+            <div class="installedGame folder">
+              <img src="./images/camera.png" /><img src="./images/settings.png" /><img src="./images/media.png" /><img src="./images/chrome.png" />
+            </div>
+            <p class="gameName" data-str-id="systemApps"></p>
+          </li>
+        </ul>
+        <p class="empty" id="noResults">No apps match your search.</p>
+      </div>
+    </main>
+
+    <!-- system apps sheet -->
+    <div class="modalContainer">
+      <div class="transparentBg" onclick="hideSystemApps();"></div>
+      <div class="folderPopup">
+        <div class="sheetHeader">
+          <p data-str-id="systemApps"></p>
+          <button class="closeButton" onclick="hideSystemApps();" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="7" y1="7" x2="17" y2="17" /><line x1="17" y1="7" x2="7" y2="17" /></svg>
+          </button>
+        </div>
+        <ul class="gameList">
+          <li class="pointer" onclick="handleClick('android')"><div class="installedGame"><img src="./images/settings.png" /></div><p class="gameName">Settings</p></li>
+          <li class="pointer" onclick="handleClick('media')"><div class="installedGame"><img src="./images/media.png" /></div><p class="gameName">Media Manager</p></li>
+          <li class="pointer" onclick="handleClick('chrome')"><div class="installedGame"><img src="./images/chrome.png" /></div><p class="gameName">Browser</p></li>
+          <li class="pointer" onclick="handleClick('camera')"><div class="installedGame"><img src="./images/camera.png" /></div><p class="gameName">Camera</p></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- delete confirmation (alert) -->
+    <div class="deleteOverlay" onclick="hideDeleteButton();"></div>
+    <div class="uninstallPopup">
+      <p class="alertTitle" data-str-id="delete"></p>
+      <p class="alertText" data-str-id="areYouSure"></p>
+      <div class="alertButtons">
+        <button class="whiteButton" onclick="hideDeleteButton();"><span data-str-id="cancel"></span></button>
+        <button class="warningButton" onclick="uninstallGame();"><span data-str-id="delete"></span></button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

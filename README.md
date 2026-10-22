@@ -40,11 +40,12 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | | |
 |---|---|
 | **Temă** | „m1lator Dark”, în stil Apple: gri închis neutru, accent albastru (#0A84FF), colțuri rotunjite |
+| **Pagina Home** | Pagina proprie în stil macOS: doar **Library** (aplicațiile tale), cu căutare. **Game center** e scos de tot: fără magazin din cloud, fără reclame, se încarcă instant. |
 | **Fullscreen** | La F11, imaginea umple tot ecranul, fără benzi negre. Ex.: dacă joci la **1280x960** (4:3), se întinde pe tot monitorul 16:9. Click-urile și tastele rămân la locul lor. |
 | **Rezoluție** | Poți scrie orice rezoluție: Setări → Display → Custom (de ex. 1280x960) |
 | **Scurtături** | Toate oprite, mai puțin **F11** (fullscreen) |
 | **Notificări** | Toate oprite: popup-uri Windows, notificări din cloud, iconița de notificări (clopoțelul), mesajele „apasă F11 ca să ieși” |
-| **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. Implicit e 240. |
+| **FPS** | Setat automat după monitor: 60 / 120 / 180 / 240 (de ex. monitor 144 Hz → 120, 240 Hz → 240). Se poate schimba din Setări → Engine (**High framerate mode**, maximum 240). |
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
 | **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere |
 | **Fără sacadări** | Oprită curățarea forțată a memoriei, care rula la fiecare 15 secunde și dădea lag în interfață |
@@ -53,7 +54,10 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Fără reclame** | Promoții, recomandări și sfaturi oprite. Actualizările automate sunt blocate, ca să nu șteargă mod-ul. |
 | **Securitate** | Blocat canalul prin care BlueStacks putea descărca și rula programe de la distanță |
 
-FPS-ul real e limitat și de Android, de joc și de monitor (de ex. la un monitor de 240 Hz vezi maximum ~240 FPS).
+**De ce nu 1000 FPS:** pentru Android, valoarea FPS din BlueStacks este frecvența ecranului (Hz), nu o limită de FPS.
+Jocurile împart această frecvență la un număr întreg: la 30 FPS în joc pe un ecran de 60 Hz, se afișează un cadru la fiecare 2 refresh-uri.
+La 1000 Hz, împărțirea nu iese exactă, așa că 30 FPS în joc devine ~15. În plus, procesorul e întrerupt de 1000 de ori pe secundă degeaba.
+De aceea m1lator păstrează valoarea un multiplu de 60, maximum 240. Valorile mai mari deja salvate (de ex. 1000) se corectează singure la pornire.
 
 ## Opțiuni avansate
 

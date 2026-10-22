@@ -29,6 +29,8 @@ foreach ($name in $original.Keys) {
     else { Set-ItemProperty $path -Name $prop -Value $value }
 }
 if (Test-Path "$BackupDir\bst_config.orig") { Copy-Item "$BackupDir\bst_config.orig" (Join-Path $Client 'bst_config') -Force }
-$theme = Join-Path $Client 'm1lator'
-if (Test-Path $theme) { Remove-Item -Recurse -Force $theme }
+foreach ($dir in 'm1lator', 'm1lator-home') {
+    $p = Join-Path $Client $dir
+    if (Test-Path $p) { Remove-Item -Recurse -Force $p }
+}
 Write-Host "settings restored ($($original.Count) values from $($snapshots.Count) snapshot(s))"
