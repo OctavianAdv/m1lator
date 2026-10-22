@@ -15,6 +15,8 @@ namespace M1lator.Boost
     ///   TimerResolution  REG_DWORD 1 = request 1 ms system timer                          (default 1)
     ///   NoPowerThrottle  REG_DWORD 1 = opt out of EcoQoS / timer throttling               (default 1)
     ///   MmcssInputThread REG_DWORD 1 = register the input/window thread with MMCSS "Games" (default 1)
+    ///   ResetFpsOnExit   REG_DWORD 1 = on close: FPS -> FpsOnExit, High framerate mode off  (default 1)
+    ///   FpsOnExit        REG_DWORD FPS written when the instance closes                     (default 30)
     /// </summary>
     public static class Booster
     {
@@ -33,9 +35,12 @@ namespace M1lator.Boost
                     if (GetInt(key, "PCoresOnly", 1) == 1) Try("P-cores only", RestrictToPerformanceCores);
                     // Apply() runs on HD-Player's main thread = the window/input message thread
                     if (GetInt(key, "MmcssInputThread", 1) == 1) Try("MMCSS Games (input thread)", RegisterInputThreadWithMmcss);
+                    if (GetInt(key, "ResetFpsOnExit", 1) == 1)
+                    {
+                        int exitFps = GetInt(key, "FpsOnExit", 30);
+                        Try("reset FPS on exit", () => RegisterFpsResetOnExit(exitFps));
+                    }
                 }
-                // runs before the VM boots, so Android starts with a refresh rate games can divide evenly
-                Try("guest refresh rate", NormalizeGuestFps);
             }
             catch (Exception ex)
             {
@@ -50,35 +55,37 @@ namespace M1lator.Boost
             catch (Exception ex) { Log.Add(name + ": " + ex.GetType().Name + " " + ex.Message); }
         }
 
-        /// <summary>Android display refresh rate as games need it: &lt;60 unchanged, else a multiple of 60, max 240.</summary>
-        public static int SnapFps(int v) => v < 60 ? v : Math.Min(v, 240) / 60 * 60;
-
-        // HD-Player is started as "HD-Player.exe <vmName> ..."; fix FPS + the fps= boot parameter of that instance
-        static bool NormalizeGuestFps()
+        // When this instance closes: FPS -> exitFps (default 30), High framerate mode off, fps= boot parameter -> exitFps.
+        // HD-Player is started as "HD-Player.exe <vmName> ..."; ProcessExit runs on every normal shutdown.
+        static bool RegisterFpsResetOnExit(int exitFps)
         {
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length < 2 || args[1].IndexOfAny(new[] { '\\', '/', '"' }) >= 0) return false;
             string guest = @"SOFTWARE\BlueStacks_bgp64\Guests\" + args[1];
-            bool changed = false;
-            using (var cfg = Registry.LocalMachine.OpenSubKey(guest + @"\Config", true))
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
-                if (cfg != null && cfg.GetValue("FPS") is int fps && SnapFps(fps) != fps)
+                try
                 {
-                    cfg.SetValue("FPS", SnapFps(fps), RegistryValueKind.DWord);
-                    Log.Add("FPS " + fps + " -> " + SnapFps(fps));
-                    changed = true;
+                    using (var cfg = Registry.LocalMachine.OpenSubKey(guest + @"\Config", true))
+                    {
+                        if (cfg != null)
+                        {
+                            cfg.SetValue("FPS", exitFps, RegistryValueKind.DWord);
+                            cfg.SetValue("EnableHighFPS", 0, RegistryValueKind.DWord);
+                        }
+                    }
+                    using (var vm = Registry.LocalMachine.OpenSubKey(guest, true))
+                    {
+                        if (vm != null && vm.GetValue("BootParameters") is string bp)
+                        {
+                            string reset = System.Text.RegularExpressions.Regex.Replace(bp, @"(^| )fps=\d+", "$1fps=" + exitFps);
+                            if (reset != bp) vm.SetValue("BootParameters", reset, RegistryValueKind.String);
+                        }
+                    }
                 }
-            }
-            using (var vm = Registry.LocalMachine.OpenSubKey(guest, true))
-            {
-                if (vm != null && vm.GetValue("BootParameters") is string bp)
-                {
-                    string fixedBp = System.Text.RegularExpressions.Regex.Replace(bp, @"(^| )fps=(\d+)",
-                        m => m.Groups[1].Value + "fps=" + SnapFps(int.Parse(m.Groups[2].Value)));
-                    if (fixedBp != bp) { vm.SetValue("BootParameters", fixedBp, RegistryValueKind.String); changed = true; }
-                }
-            }
-            return changed;
+                catch { }
+            };
+            return true;
         }
 
         // Multimedia Class Scheduler "Games" task: the thread is scheduled ahead of normal work while it is runnable.

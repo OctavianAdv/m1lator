@@ -45,7 +45,7 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Rezoluție** | Poți scrie orice rezoluție: Setări → Display → Custom (de ex. 1280x960) |
 | **Scurtături** | Toate oprite, mai puțin **F11** (fullscreen) |
 | **Notificări** | Toate oprite: popup-uri Windows, notificări din cloud, iconița de notificări (clopoțelul), mesajele „apasă F11 ca să ieși” |
-| **FPS** | Setat automat după monitor: 60 / 120 / 180 / 240 (de ex. monitor 144 Hz → 120, 240 Hz → 240). Se poate schimba din Setări → Engine (**High framerate mode**, maximum 240). |
+| **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. La închiderea emulatorului, FPS revine la **30** și High framerate mode se oprește singur. |
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
 | **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere |
 | **Fără sacadări** | Oprită curățarea forțată a memoriei, care rula la fiecare 15 secunde și dădea lag în interfață |
@@ -54,10 +54,10 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Fără reclame** | Promoții, recomandări și sfaturi oprite. Actualizările automate sunt blocate, ca să nu șteargă mod-ul. |
 | **Securitate** | Blocat canalul prin care BlueStacks putea descărca și rula programe de la distanță |
 
-**De ce nu 1000 FPS:** pentru Android, valoarea FPS din BlueStacks este frecvența ecranului (Hz), nu o limită de FPS.
-Jocurile împart această frecvență la un număr întreg: la 30 FPS în joc pe un ecran de 60 Hz, se afișează un cadru la fiecare 2 refresh-uri.
-La 1000 Hz, împărțirea nu iese exactă, așa că 30 FPS în joc devine ~15. În plus, procesorul e întrerupt de 1000 de ori pe secundă degeaba.
-De aceea m1lator păstrează valoarea un multiplu de 60, maximum 240. Valorile mai mari deja salvate (de ex. 1000) se corectează singure la pornire.
+**De ce se resetează la închidere:** pentru Android, valoarea FPS din BlueStacks este frecvența ecranului (Hz).
+Dacă emulatorul repornește cu 1000, unele jocuri împart greșit frecvența (de ex. 30 FPS în joc devine ~15).
+De aceea, la închidere, FPS revine la 30 și High framerate mode se oprește. Valoarea mare o pui din nou când vrei, în fiecare sesiune.
+Notă: dacă schimbi în Setări ceva care cere repornirea instanței (RAM, nuclee etc.), repornirea contează tot ca o închidere, deci FPS revine și atunci la 30.
 
 ## Opțiuni avansate
 
@@ -71,6 +71,8 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `NoPowerThrottle` | DWORD | 1 | 0 = lasă Windows să facă throttling |
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
 | `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
+| `ResetFpsOnExit` | DWORD | 1 | 0 = FPS și High framerate mode rămân cum le-ai lăsat la închidere |
+| `FpsOnExit` | DWORD | 30 | FPS-ul setat la închiderea emulatorului |
 
 Log: `C:\ProgramData\BlueStacks_bgp64\Logs\m1lator.log`
 

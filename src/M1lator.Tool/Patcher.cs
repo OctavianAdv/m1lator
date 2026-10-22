@@ -16,9 +16,7 @@ namespace M1lator.Tool;
 /// </summary>
 static class Patcher
 {
-    // Android uses FPS as its display refresh rate; games pace frames as integer divisors of it
-    // (30 FPS cap at 1000 Hz -> every 34th vsync = ~29, or worse 15). Keep it a multiple of 60, max 240.
-    public const int MaxGuestFps = 240;
+    public const int MaxFps = 1000;
 
     public static int Run(string originalDir, string outDir, string boostDll)
     {
@@ -56,22 +54,14 @@ static class Patcher
 
     static void PatchHdCommon(ModuleDefMD m)
     {
-        // 1. FPS = Android display refresh rate: every reader of InstanceRegistry.FPS (settings UI, boot params,
-        //    live setfpsvalue) gets a value games can divide evenly: <60 unchanged, else multiple of 60, max 240.
-        //    (High framerate mode keeps BlueStacks' own 240 slider maximum.)
-        var registry = Type(m, "BlueStacks.Common.InstanceRegistry");
-        var snap = AddSnapFps(m, registry);
-        var getFps = Method(registry, "get_FPS");
-        // turn each `ret` into `call SnapFps` + new `ret`, so branches that target the old ret also pass through the snap
-        var rets = getFps.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList();
-        Expect(rets.Count > 0, "InstanceRegistry.get_FPS ret");
-        foreach (var r in rets)
-        {
-            r.OpCode = OpCodes.Call;
-            r.Operand = snap;
-            getFps.Body.Instructions.Insert(getFps.Body.Instructions.IndexOf(r) + 1, OpCodes.Ret.ToInstruction());
-        }
-        Console.WriteLine($"  InstanceRegistry.FPS -> multiple of 60, max {MaxGuestFps}");
+        // 1. High framerate mode: slider maximum 240 -> 1000 (slider binds to MaxFPS).
+        //    FPS goes back to 30 / high framerate off when the emulator closes (M1lator.Boost, HD-Player exit).
+        var setter = Method(m, "BlueStacks.Common.EngineSettingBaseViewModel", "set_EnableHighFrameRates");
+        int hits = 0;
+        foreach (var ins in setter.Body.Instructions)
+            if (ins.IsLdcI4() && ins.GetLdcI4Value() == 240) { ins.OpCode = OpCodes.Ldc_I4; ins.Operand = MaxFps; hits++; }
+        Expect(hits == 1, "MaxFPS = 240 constant");
+        Console.WriteLine($"  high-fps cap 240 -> {MaxFps}");
 
         // 2. Telemetry: every cloud stats sender becomes a no-op (FrontendStatusUpdate talks to the local agent, keep it)
         StubAll(m, "BlueStacks.Common.Stats", md => md.Name.StartsWith("Send") && md.Name != "SendFrontendStatusUpdate");
@@ -242,39 +232,6 @@ static class Patcher
         body.Instructions.Add(OpCodes.Ret.ToInstruction());
         md.Body = body;
         Console.WriteLine($"  stub {md.DeclaringType.Name}.{md.Name}");
-    }
-
-    // static int M1lator_SnapFps(int v) => v < 60 ? v : Math.Min(v, MaxGuestFps) / 60 * 60;
-    static MethodDef AddSnapFps(ModuleDef m, TypeDef owner)
-    {
-        var md = new MethodDefUser("M1lator_SnapFps",
-            MethodSig.CreateStatic(m.CorLibTypes.Int32, m.CorLibTypes.Int32),
-            MethodImplAttributes.IL | MethodImplAttributes.Managed,
-            MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig);
-        md.ParamDefs.Add(new ParamDefUser("v", 1));
-        var body = new CilBody();
-        var i = body.Instructions;
-        var capped = OpCodes.Ldarg_0.ToInstruction();
-        var atLeast60 = OpCodes.Ldarg_0.ToInstruction();
-        i.Add(OpCodes.Ldarg_0.ToInstruction());
-        i.Add(OpCodes.Ldc_I4.ToInstruction(60));
-        i.Add(OpCodes.Bge.ToInstruction(atLeast60));
-        i.Add(OpCodes.Ldarg_0.ToInstruction());
-        i.Add(OpCodes.Ret.ToInstruction());
-        i.Add(atLeast60);                                   // if (v > Max) v = Max;
-        i.Add(OpCodes.Ldc_I4.ToInstruction(MaxGuestFps));
-        i.Add(OpCodes.Ble.ToInstruction(capped));
-        i.Add(OpCodes.Ldc_I4.ToInstruction(MaxGuestFps));
-        i.Add(OpCodes.Starg.ToInstruction(md.Parameters[0]));
-        i.Add(capped);                                      // return v / 60 * 60;
-        i.Add(OpCodes.Ldc_I4.ToInstruction(60));
-        i.Add(OpCodes.Div.ToInstruction());
-        i.Add(OpCodes.Ldc_I4.ToInstruction(60));
-        i.Add(OpCodes.Mul.ToInstruction());
-        i.Add(OpCodes.Ret.ToInstruction());
-        md.Body = body;
-        owner.Methods.Add(md);
-        return md;
     }
 
     // System.IO.File::Exists(string) referenced from the target's own corlib (mscorlib for .NET Framework)

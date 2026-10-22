@@ -8,7 +8,7 @@
   so restore-settings.ps1 can put things back.
 #>
 param(
-    [int]$Fps = 0,               # Android refresh rate; 0 = auto from the monitor (multiple of 60, max 240)
+    [int]$Fps = 30,              # starting FPS (also what HD-Player resets to on close); >60 turns High framerate mode on
     [switch]$ShowFps,            # native FPS overlay
     [int]$AstcOption = -1,       # -1 auto (3 if GPU supports it, else 2), 0 off, 1 software, 2 software+cache, 3 hardware
     [switch]$SkipTheme
@@ -58,13 +58,9 @@ if (Test-Path "$offline\js\index.js") {
 # ---------------------------------------------------------------- per-instance performance presets
 # vCPUs run inside HD-Player next to the renderer and input threads: leave 2 performance cores free for them
 $tools = Get-M1latorTools
-# FPS = Android's display refresh rate. Default: the monitor's refresh rate as a multiple of 60 (games divide
-# it evenly: 30/60 FPS caps stay exact), max 240 - e.g. 239 Hz -> 240, 144 Hz -> 120, 60 Hz -> 60.
-if ($Fps -le 0) {
-    $hz = (Get-CimInstance Win32_VideoController | Measure-Object CurrentRefreshRate -Maximum).Maximum
-    if (-not $hz -or $hz -lt 60) { $hz = 60 }
-    $Fps = [Math]::Min(240, [Math]::Floor(($hz + 5) / 60) * 60)
-}
+# Instances start in the same state the patched HD-Player leaves them in when it closes:
+# FPS 30, High framerate mode off (turn it on per session in Settings -> Engine, slider up to 1000).
+$highFps = [int]($Fps -gt 60)
 $pcores = [int]((& $tools.Tool pcores) | Select-Object -First 1)
 $vcpus = [Math]::Max(2, [Math]::Min(6, $pcores - 2))
 Write-Host "performance cores: $pcores -> $vcpus vCPUs per instance"
@@ -73,7 +69,7 @@ foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     $g = "$BsKey\Guests\$vm"
     if (-not (Test-Path "$g\Config")) { continue }
     Set-Reg "$g\Config" 'VCPUs' $vcpus
-    Set-Reg "$g\Config" 'EnableHighFPS' 1
+    Set-Reg "$g\Config" 'EnableHighFPS' $highFps
     Set-Reg "$g\Config" 'FPS' $Fps
     Set-Reg "$g\Config" 'ShowFPS' ([int][bool]$ShowFps)
     Set-Reg "$g\Config" 'GlRenderMode' 1          # OpenGL
@@ -88,7 +84,7 @@ foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     $bp = (Get-ItemProperty $g).BootParameters
     $new = if ($bp -match '(^| )fps=\d+') { $bp -replace '(^| )fps=\d+', "`$1fps=$Fps" } else { "$bp fps=$Fps" }
     Set-Reg $g 'BootParameters' $new 'String'
-    Write-Host "$vm : $vcpus vCPUs, FPS=$Fps, high framerate mode on, ASTC=$astc, OpenGL"
+    Write-Host "$vm : $vcpus vCPUs, FPS=$Fps, high framerate mode $(if ($highFps) { 'on' } else { 'off' }), ASTC=$astc, OpenGL"
 }
 Set-Reg "$BsKey\Config" 'ForceDedicatedGPU' 1
 
