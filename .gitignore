@@ -1,0 +1,14 @@
+# Never commit BlueStacks binaries or decompiled proprietary source
+*.dll
+*.exe
+*.sys
+*.pdb
+*.r0
+*.rc
+*.lib
+*.vdi
+decomp/
+backup/
+build/
+bin/
+obj/
