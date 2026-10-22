@@ -17,6 +17,9 @@ namespace M1lator.Client
     ///   App.Main start                    -> Init()                  global UI font
     ///   TopBar constructor end            -> ApplyTopBar(this)       RGB "M1LATOR", no BlueStacks logo/version
     ///   AboutSettingsControl ctor end     -> ApplyAbout(this)        m1lator version instead of BlueStacks'
+    ///   SettingsWindow.CreateAllButtons   -> FilterSettingsTabs/MapSettingsTab   hide tabs we don't use
+    ///   SettingsWindow.ChangeSettingsTab  -> MapSettingsTab          never open a hidden tab
+    ///   SettingsWindow ctor end           -> StyleSettings(this)     pill tabs, large title
     /// Settings: HKLM\SOFTWARE\BlueStacks_bgp64\m1lator
     ///   Font     REG_SZ  UI font: "Geist" (default) | "Space Grotesk" | "System" (keep Windows font)
     ///   Version  REG_SZ  m1lator version shown in Settings -> About (written by the installer)
@@ -67,6 +70,83 @@ namespace M1lator.Client
             catch { }
         }
 
+        // ---------------------------------------------------------------- settings window
+        // Hidden tabs: m1lator\HiddenSettings (comma separated BlueStacks tab ids), default below.
+        //   STRING_NOTIFICATION          notifications are disabled by m1lator anyway
+        //   STRING_GAME_SETTINGS         BlueStacks presets for PUBG / Free Fire / COD only
+        //   STRING_SHORTCUT_KEY_SETTINGS only F11 is active
+        const string DefaultHiddenSettings = "STRING_NOTIFICATION,STRING_GAME_SETTINGS,STRING_SHORTCUT_KEY_SETTINGS";
+
+        // SettingsWindow.CreateAllButtons start: drop hidden tabs before the buttons are built
+        public static void FilterSettingsTabs(object window)
+        {
+            try
+            {
+                if (!(GetProp(window, "SettingsControlNameList") is System.Collections.Generic.List<string> tabs)) return;
+                string[] hidden = GetSetting("HiddenSettings", DefaultHiddenSettings).Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                tabs.RemoveAll(t => Array.IndexOf(hidden, t) >= 0);
+                var start = window.GetType().GetProperty("StartUpTab");
+                if (start != null) start.SetValue(window, MapSettingsTab(window, start.GetValue(window, null) as string), null);
+            }
+            catch { }
+        }
+
+        // SettingsWindow.ChangeSettingsTab / CreateAllButtons: a request for a hidden tab opens Engine instead
+        // (BlueStacks indexes its button dictionary by tab id, so an unknown tab would throw)
+        public static string MapSettingsTab(object window, string tab)
+        {
+            try
+            {
+                if (!(GetProp(window, "SettingsControlNameList") is System.Collections.Generic.List<string> tabs) || tabs.Count == 0 || tabs.Contains(tab)) return tab;
+                return tabs.Contains("STRING_ENGINE_SETTING") ? "STRING_ENGINE_SETTING" : tabs[0];
+            }
+            catch { return tab; }
+        }
+
+        // SettingsWindow constructor end: macOS System Settings style (colours come from the m1lator theme)
+        public static void StyleSettings(object window)
+        {
+            try
+            {
+                if (!(window is FrameworkElement root)) return;
+                RoutedEventHandler apply = null;
+                apply = (s, e) =>
+                {
+                    root.Loaded -= apply;
+                    try
+                    {
+                        if (Get(window, "mLblBlueStacksSettings") is Label title)
+                        {
+                            title.Content = "Settings";
+                            title.FontSize = 20;
+                            title.FontWeight = FontWeights.Bold;
+                        }
+                        Hide(Get(window, "mSelectedLine"));          // selection is shown by the pill instead
+                        if (Get(window, "mSettingsButtons") is System.Collections.IDictionary buttons)
+                            foreach (var b in buttons.Values)
+                                if (b is Control button) StyleTabButton(button);
+                    }
+                    catch { }
+                };
+                root.Loaded += apply;
+            }
+            catch { }
+        }
+
+        static void StyleTabButton(Control button)
+        {
+            button.Margin = new Thickness(10, 2, 10, 2);
+            button.MinHeight = 36;
+            button.FontSize = 13.5;
+            button.ApplyTemplate();
+            // round the template's background border into a pill
+            for (DependencyObject d = button; d != null && VisualTreeHelper.GetChildrenCount(d) > 0;)
+            {
+                d = VisualTreeHelper.GetChild(d, 0);
+                if (d is Border border) { border.CornerRadius = new CornerRadius(8); break; }
+            }
+        }
+
         // ---------------------------------------------------------------- wordmark
 
         static void MakeWordmark(TextBlock title)
@@ -112,7 +192,18 @@ namespace M1lator.Client
             return font.FamilyTypefaces.Count > 0 ? font : null;
         }
 
-        static object Get(object owner, string field) => owner?.GetType().GetField(field, Field)?.GetValue(owner);
+        static object Get(object owner, string field)
+        {
+            // fields may live on a base class (SettingsWindowBase)
+            for (Type t = owner?.GetType(); t != null; t = t.BaseType)
+            {
+                FieldInfo f = t.GetField(field, Field | BindingFlags.DeclaredOnly);
+                if (f != null) return f.GetValue(owner);
+            }
+            return null;
+        }
+
+        static object GetProp(object owner, string name) => owner?.GetType().GetProperty(name)?.GetValue(owner, null);
 
         static void Hide(object element)
         {

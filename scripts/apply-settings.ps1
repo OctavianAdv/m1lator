@@ -47,12 +47,42 @@ $fontDst = Join-Path $Client 'm1lator-fonts'
 if (Test-Path $fontDst) { Remove-Item -Recurse -Force $fontDst }
 Copy-Item -Recurse (Join-Path $PSScriptRoot 'fonts') $fontDst
 if (-not (Test-Path "$BsKey\m1lator")) { New-Item "$BsKey\m1lator" | Out-Null }
+# HD-Player runs without admin and writes runtime state here (power plan to restore): let Users set values
+# (SID S-1-5-32-545 = BUILTIN\Users, works on any Windows language)
+$acl = Get-Acl "$BsKey\m1lator"
+$users = New-Object System.Security.Principal.SecurityIdentifier 'S-1-5-32-545'
+$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule($users, 'ReadKey, SetValue', 'Allow')))
+Set-Acl "$BsKey\m1lator" $acl
 $version = if (Test-Path (Join-Path $Root 'VERSION')) { (Get-Content (Join-Path $Root 'VERSION') -Raw).Trim() } else { '' }
 Set-ItemProperty "$BsKey\m1lator" -Name 'Version' -Value $version -Type String
 if (-not (Get-ItemProperty "$BsKey\m1lator" -Name 'Font' -ErrorAction SilentlyContinue)) {
     Set-ItemProperty "$BsKey\m1lator" -Name 'Font' -Value 'Geist' -Type String   # keep a font the user picked
 }
 Write-Host "branding: Geist font, RGB M1LATOR title, m1lator $version in About"
+
+# ---------------------------------------------------------------- power plan used while playing
+# HD-Player (M1lator.Boost) switches to this plan on start and restores the user's plan when the last instance closes.
+$planName = 'm1lator Ultimate Performance'
+$plan = (Get-ItemProperty "$BsKey\m1lator" -Name 'PowerScheme' -ErrorAction SilentlyContinue).PowerScheme
+if (-not $plan -or ((powercfg /list | Out-String) -notmatch [regex]::Escape($plan))) {
+    $guidRe = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+    $plan = [regex]::Match((powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null | Out-String), $guidRe).Value   # Ultimate Performance
+    if (-not $plan) { $plan = [regex]::Match((powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2>$null | Out-String), $guidRe).Value }  # High performance
+    if ($plan) { powercfg -changename $plan $planName 'Activated by m1lator while BlueStacks runs' | Out-Null }
+}
+if ($plan) {
+    Set-ItemProperty "$BsKey\m1lator" -Name 'PowerScheme' -Value $plan -Type String
+    Write-Host "power plan while playing: $planName"
+} else { Write-Host 'power plan: could not create a performance plan, keeping the current one' }
+
+# ---------------------------------------------------------------- remaining telemetry switches (registry-gated)
+Set-Reg "$BsKey\Config" 'SystemInfoStats2' 0          # device capabilities report at every boot
+Set-Reg "$BsKey\Config" 'SystemStats' 0
+Set-Reg "$BsKey\Config" 'IsTimelineStats4Enabled' 0
+if (-not (Get-ItemProperty "$BsKey\m1lator" -Name 'Dpi' -ErrorAction SilentlyContinue)) {
+    Set-ItemProperty "$BsKey\m1lator" -Name 'Dpi' -Value 440 -Type DWord   # M1lator.Boost forces this at every start
+}
+$dpi = (Get-ItemProperty "$BsKey\m1lator").Dpi
 
 # ---------------------------------------------------------------- home page (Library only, no Game center)
 # BlueStacks' own JS bridge/images/translations come from the local install; our page + style go on top.
@@ -95,8 +125,9 @@ foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     # boot params carry fps= to the guest (BlueStacks adds it the same way)
     $bp = (Get-ItemProperty $g).BootParameters
     $new = if ($bp -match '(^| )fps=\d+') { $bp -replace '(^| )fps=\d+', "`$1fps=$Fps" } else { "$bp fps=$Fps" }
+    if ($dpi -gt 0) { $new = if ($new -match '(^| )DPI=\d+') { $new -replace '(^| )DPI=\d+', "`$1DPI=$dpi" } else { "$new DPI=$dpi" } }
     Set-Reg $g 'BootParameters' $new 'String'
-    Write-Host "$vm : $vcpus vCPUs, FPS=$Fps, high framerate mode $(if ($highFps) { 'on' } else { 'off' }), ASTC=$astc, OpenGL"
+    Write-Host "$vm : $vcpus vCPUs, DPI=$dpi, FPS=$Fps, high framerate mode $(if ($highFps) { 'on' } else { 'off' }), ASTC=$astc, OpenGL"
 }
 Set-Reg "$BsKey\Config" 'ForceDedicatedGPU' 1
 
@@ -147,6 +178,12 @@ if (Test-Path $cfgPath) {
         IsShowGamingSummaryPreference = 'false'
         IsShowNotificationCentre      = 'false'   # bell icon + notification drawer
         IsAppCenterTabVisible         = 'false'   # App Center / Game center tab
+        IsShowDiscordPreference       = 'false'   # Preferences clutter
+        IsShowDesktopShortcutPreference = 'false'
+        IsShowHelpCenter              = 'false'
+        ShowBeginnersGuidePreference  = 'false'
+        IsTopbarHelpEnabled           = 'false'   # "?" button in the top bar
+        IsUserAccountBtnEnabled       = 'false'   # account button in the top bar
         IsCustomResolutionInputAllowed = 'true'   # lets you type e.g. 1280x960 in Settings -> Display
     }
     foreach ($k in $flags.Keys) {

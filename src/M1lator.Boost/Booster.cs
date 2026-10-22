@@ -17,6 +17,9 @@ namespace M1lator.Boost
     ///   MmcssInputThread REG_DWORD 1 = register the input/window thread with MMCSS "Games" (default 1)
     ///   ResetFpsOnExit   REG_DWORD 1 = on close: FPS -> FpsOnExit, High framerate mode off  (default 1)
     ///   FpsOnExit        REG_DWORD FPS written when the instance closes                     (default 30)
+    ///   Dpi              REG_DWORD Android DPI forced at every start, 0 = leave as is       (default 440)
+    ///   PowerScheme      REG_SZ    power plan GUID activated while playing (set by installer)
+    ///   BoostCompanions  REG_DWORD 1 = BstkSVC AboveNormal + no throttling, UI no throttling (default 1)
     /// </summary>
     public static class Booster
     {
@@ -40,6 +43,11 @@ namespace M1lator.Boost
                         int exitFps = GetInt(key, "FpsOnExit", 30);
                         Try("reset FPS on exit", () => RegisterFpsResetOnExit(exitFps));
                     }
+                    int dpi = GetInt(key, "Dpi", 440);
+                    if (dpi > 0) Try("DPI " + dpi, () => ForceDpi(dpi));
+                    string scheme = GetString(key, "PowerScheme", "");
+                    if (scheme.Length > 0) Try("power plan", () => ActivatePowerPlan(scheme));
+                    if (GetInt(key, "BoostCompanions", 1) == 1) BoostCompanionsLater();
                 }
             }
             catch (Exception ex)
@@ -53,6 +61,109 @@ namespace M1lator.Boost
         {
             try { Log.Add(name + ": " + (action() ? "ok" : "skipped")); }
             catch (Exception ex) { Log.Add(name + ": " + ex.GetType().Name + " " + ex.Message); }
+        }
+
+        static string GuestKey()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length < 2 || args[1].IndexOfAny(new[] { '\\', '/', '"' }) >= 0) return null;
+            return @"SOFTWARE\BlueStacks_bgp64\Guests\" + args[1];
+        }
+
+        // Android density (boot parameter DPI=), applied before the VM boots so it holds every start
+        static bool ForceDpi(int dpi)
+        {
+            string guest = GuestKey();
+            if (guest == null) return false;
+            using (var vm = Registry.LocalMachine.OpenSubKey(guest, true))
+            {
+                if (vm == null || !(vm.GetValue("BootParameters") is string bp)) return false;
+                string updated = System.Text.RegularExpressions.Regex.IsMatch(bp, @"(^| )DPI=\d+")
+                    ? System.Text.RegularExpressions.Regex.Replace(bp, @"(^| )DPI=\d+", "$1DPI=" + dpi)
+                    : bp + " DPI=" + dpi;
+                if (updated == bp) return false;
+                vm.SetValue("BootParameters", updated, RegistryValueKind.String);
+                return true;
+            }
+        }
+
+        // ---------------------------------------------------------------- power plan while playing
+        // The installer creates "m1lator Ultimate Performance" and stores its GUID in m1lator\PowerScheme.
+        // First instance to start remembers the user's plan (PreviousPowerScheme); the last one to close restores it.
+        static bool ActivatePowerPlan(string schemeText)
+        {
+            var target = new Guid(schemeText);
+            Guid current = ActivePowerScheme();
+            if (current != target)
+            {
+                // installer grants Users SetValue on the m1lator key (not subkey creation), so open with just those rights
+                using (var key = OpenForValues())
+                    if (key != null && key.GetValue("PreviousPowerScheme") == null) key.SetValue("PreviousPowerScheme", current.ToString());
+                if (PowerSetActiveScheme(IntPtr.Zero, ref target) != 0) return false;
+            }
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                try
+                {
+                    int me = Process.GetCurrentProcess().Id;
+                    foreach (var p in Process.GetProcessesByName("HD-Player"))
+                        if (p.Id != me) return;                      // another instance still playing
+                    using (var key = OpenForValues())
+                    {
+                        if (key?.GetValue("PreviousPowerScheme") is string prev)
+                        {
+                            var g = new Guid(prev);
+                            if (ActivePowerScheme() == target) PowerSetActiveScheme(IntPtr.Zero, ref g);
+                            key.DeleteValue("PreviousPowerScheme", false);
+                        }
+                    }
+                }
+                catch { }
+            };
+            return true;
+        }
+
+        static RegistryKey OpenForValues() =>
+            Registry.LocalMachine.OpenSubKey(KeyPath, RegistryKeyPermissionCheck.ReadWriteSubTree,
+                System.Security.AccessControl.RegistryRights.QueryValues | System.Security.AccessControl.RegistryRights.SetValue);
+
+        static Guid ActivePowerScheme()
+        {
+            IntPtr p;
+            if (PowerGetActiveScheme(IntPtr.Zero, out p) != 0) return Guid.Empty;
+            try { return (Guid)Marshal.PtrToStructure(p, typeof(Guid)); }
+            finally { LocalFree(p); }
+        }
+
+        // ---------------------------------------------------------------- other BlueStacks processes
+        // BstkSVC (VirtualBox COM service: disk/network I/O for the VM) gets AboveNormal + no power throttling;
+        // the client UI (Bluestacks) only loses power throttling so it stays responsive without competing with the game.
+        static void BoostCompanionsLater()
+        {
+            var t = new System.Threading.Thread(() =>
+            {
+                foreach (int delay in new[] { 3000, 30000 })   // BstkSVC/UI may start after HD-Player
+                {
+                    System.Threading.Thread.Sleep(delay);
+                    BoostProcesses("BstkSVC", ProcessPriorityClass.AboveNormal);
+                    BoostProcesses("Bluestacks", null);
+                }
+            }) { IsBackground = true, Priority = System.Threading.ThreadPriority.BelowNormal };
+            t.Start();
+        }
+
+        static void BoostProcesses(string name, ProcessPriorityClass? priority)
+        {
+            foreach (var p in Process.GetProcessesByName(name))
+            {
+                try
+                {
+                    if (priority.HasValue && p.PriorityClass != priority.Value) p.PriorityClass = priority.Value;
+                    var state = new PROCESS_POWER_THROTTLING_STATE { Version = 1, ControlMask = 0x1, StateMask = 0 };
+                    SetProcessInformation(p.Handle, ProcessPowerThrottling, ref state, Marshal.SizeOf(state));
+                }
+                catch { }
+            }
         }
 
         // When this instance closes: FPS -> exitFps (default 30), High framerate mode off, fps= boot parameter -> exitFps.
@@ -192,6 +303,10 @@ namespace M1lator.Boost
             public uint ControlMask;
             public uint StateMask;
         }
+
+        [DllImport("powrprof.dll")] static extern uint PowerGetActiveScheme(IntPtr userRootPowerKey, out IntPtr activePolicyGuid);
+        [DllImport("powrprof.dll")] static extern uint PowerSetActiveScheme(IntPtr userRootPowerKey, ref Guid schemeGuid);
+        [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr hMem);
 
         const int AVRT_PRIORITY_HIGH = 1;
         [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]

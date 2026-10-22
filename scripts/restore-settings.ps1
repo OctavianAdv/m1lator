@@ -29,6 +29,17 @@ foreach ($name in $original.Keys) {
     else { Set-ItemProperty $path -Name $prop -Value $value }
 }
 if (Test-Path "$BackupDir\bst_config.orig") { Copy-Item "$BackupDir\bst_config.orig" (Join-Path $Client 'bst_config') -Force }
+# power plan created by m1lator: switch back to the user's plan (or Balanced) and delete ours
+$m1 = Get-ItemProperty "$BsKey\m1lator" -ErrorAction SilentlyContinue
+if ($m1 -and $m1.PowerScheme) {
+    if ((powercfg /getactivescheme | Out-String) -match [regex]::Escape($m1.PowerScheme)) {
+        $back = if ($m1.PreviousPowerScheme) { $m1.PreviousPowerScheme } else { '381b4222-f694-41f0-9685-ff5bb260df2e' }
+        powercfg /setactive $back | Out-Null
+    }
+    powercfg /delete $m1.PowerScheme 2>$null | Out-Null
+}
+if (Test-Path "$BsKey\m1lator") { Remove-Item "$BsKey\m1lator" -Recurse -Force }
+
 foreach ($dir in 'm1lator', 'm1lator-home', 'm1lator-fonts') {
     $p = Join-Path $Client $dir
     if (Test-Path $p) { Remove-Item -Recurse -Force $p }

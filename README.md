@@ -49,10 +49,14 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Notificări** | Toate oprite: popup-uri Windows, notificări din cloud, iconița de notificări (clopoțelul), mesajele „apasă F11 ca să ieși” |
 | **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. La închiderea emulatorului, FPS revine la **30** și High framerate mode se oprește singur. |
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
-| **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere |
+| **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere. Toate nucleele pentru Android ar însemna mai puține FPS și input lag, pentru că firele de randare și de input ar aștepta după vCPU. |
+| **Plan de energie** | Cât timp joci, Windows trece pe **m1lator Ultimate Performance**. La închiderea ultimei instanțe, revine la planul tău. |
+| **Procese BlueStacks** | BstkSVC (disc/rețea pentru Android) rulează la prioritate mai mare și fără throttling de energie. Nici interfața nu mai are throttling. |
+| **DPI** | Android pornește mereu cu **DPI 440**. Recomandat la 1280x960 sau mai mare: la 1280x720, DPI 440 lasă prea puțin spațiu și unele aplicații arată ciudat. |
+| **Setări** | Stil macOS: bară laterală cu selecție albastră, titlu mare. Scoase tab-urile inutile: Notificări, Game settings (doar PUBG/Free Fire/COD), Scurtături. Scoase din Preferințe și din bara de sus: Discord, scurtături pe desktop, Help, ghidul de început, butonul de cont. |
 | **Fără sacadări** | Oprită curățarea forțată a memoriei, care rula la fiecare 15 secunde și dădea lag în interfață |
 | **Randare** | OpenGL, GPU dedicat forțat (și din setările Windows, pentru laptopuri). Texturi ASTC (jocuri Unity, ex. Standoff 2): decodare hardware dacă placa video o suportă, altfel software cu cache |
-| **Fără telemetrie** | Toate statisticile trimise către cloud sunt oprite, la fel și scanarea proceselor (SecurityMetrics) |
+| **Fără telemetrie** | Toate statisticile trimise către cloud sunt oprite: raportul de utilizare a aplicațiilor, info despre sistem la fiecare boot, timeline, scanarea proceselor (SecurityMetrics). Oprit și browserul ascuns de notificări Firebase. |
 | **Fără reclame** | Promoții, recomandări și sfaturi oprite. Actualizările automate sunt blocate, ca să nu șteargă mod-ul. |
 | **Securitate** | Blocat canalul prin care BlueStacks putea descărca și rula programe de la distanță |
 
@@ -73,6 +77,9 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `NoPowerThrottle` | DWORD | 1 | 0 = lasă Windows să facă throttling |
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
 | `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
+| `Dpi` | DWORD | 440 | DPI-ul Android la fiecare pornire. 0 = nu-l schimba |
+| `BoostCompanions` | DWORD | 1 | 0 = nu umbla la prioritatea BstkSVC / interfață |
+| `HiddenSettings` | text | (3 tab-uri) | Tab-urile ascunse din Setări, separate prin virgulă (ex. `STRING_NOTIFICATION`). Gol = toate vizibile |
 | `Font` | text | `Geist` | Fontul interfeței: `Geist`, `Space Grotesk` sau `System` (fontul Windows) |
 | `ResetFpsOnExit` | DWORD | 1 | 0 = FPS și High framerate mode rămân cum le-ai lăsat la închidere |
 | `FpsOnExit` | DWORD | 30 | FPS-ul setat la închiderea emulatorului |

@@ -109,6 +109,22 @@ static class Patcher
         CallAtEndOfConstructor(m, "BlueStacks.BlueStacksUI.AboutSettingsControl", m.Import(brand.FindMethod("ApplyAbout")));
         Console.WriteLine("  branding: font, M1LATOR top bar, About version");
 
+        // Settings window: hidden tabs + macOS-style look
+        var settings = Type(m, "BlueStacks.BlueStacksUI.SettingsWindow");
+        var filter = m.Import(brand.FindMethod("FilterSettingsTabs"));
+        var map = m.Import(brand.FindMethod("MapSettingsTab"));
+        var create = Method(settings, "CreateAllButtons");          // this, string startUpTab
+        create.Body.Instructions.Insert(0, OpCodes.Ldarg_0.ToInstruction());
+        create.Body.Instructions.Insert(1, OpCodes.Call.ToInstruction(filter));
+        InsertMapArg(create, 1, map, 2);
+        InsertMapArg(Method(settings, "ChangeSettingsTab"), 2, map, 0);   // this, MainWindow window, string tab
+        CallAtEndOfConstructor(m, "BlueStacks.BlueStacksUI.SettingsWindow", m.Import(brand.FindMethod("StyleSettings")));
+        Console.WriteLine("  settings: hidden tabs, macOS style");
+
+        // Remaining telemetry: per-app usage report, hidden Firebase notification browser (extra Chromium page)
+        Stub(Method(m, "BlueStacks.BlueStacksUI.PromotionManager", "SendAppUsageStats"));
+        Stub(Method(m, "BlueStacks.BlueStacksUI.MainWindow", "CreateFirebaseBrowserControl"));
+
         StubAll(m, "BlueStacks.BlueStacksUI.ClientStats", md => md.Name.StartsWith("Send"));
 
         // Updater: always report "no update" (blocks forced silent 'hard' updates that would wipe the mod)
@@ -154,6 +170,17 @@ static class Patcher
         foreach (var x in local) ins.Insert(at++, new Instruction(x.OpCode, x.Operand));
         ins.Insert(at, OpCodes.Ret.ToInstruction());
         Console.WriteLine("  BlueStacksUIUtils.GetHtmlHomeUrl -> local m1lator home");
+    }
+
+    // At instruction index `at`: arg = map(this, arg)   (arg index counts `this` as 0)
+    static void InsertMapArg(MethodDef md, int argIndex, IMethod map, int at)
+    {
+        var p = md.Parameters[argIndex];
+        var ins = md.Body.Instructions;
+        ins.Insert(at, OpCodes.Ldarg_0.ToInstruction());
+        ins.Insert(at + 1, OpCodes.Ldarg.ToInstruction(p));
+        ins.Insert(at + 2, OpCodes.Call.ToInstruction(map));
+        ins.Insert(at + 3, OpCodes.Starg.ToInstruction(p));
     }
 
     // Inserts `hook(this)` before every `ret` of the type's (single) instance constructor.

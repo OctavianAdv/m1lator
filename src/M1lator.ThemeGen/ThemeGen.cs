@@ -45,6 +45,26 @@ static class ThemeGen
         ["TextBoxRadius"] = "8,8,8,8",
     };
 
+    // Settings window as macOS System Settings: lighter sidebar, darker content, solid blue pill for the selected tab
+    static readonly Dictionary<string, string> SettingsBrushes = new()
+    {
+        ["SettingsWindowBackground"] = "#FF1E1E20",
+        ["SettingsWindowTitleBarBackground"] = "#FF2A2A2D",
+        ["SettingsWindowTitleBarForeGround"] = "#FFF5F5F7",
+        ["SettingsWindowTabMenuBackground"] = "#FF2A2A2D",
+        ["SettingsWindowTabMenuItemBackground"] = "#002A2A2D",
+        ["SettingsWindowTabMenuItemHoverBackground"] = "#FF3A3A3D",
+        ["SettingsWindowTabMenuItemSelectedBackground"] = "#FF0A84FF",
+        ["SettingsWindowTabMenuItemSelectedForeground"] = "#FFFFFFFF",
+        ["SettingsWindowTabMenuItemForeground"] = "#FFEBEBF0",
+        ["SettingsWindowTabMenuItemLegendForeground"] = "#FFF5F5F7",
+        ["SettingsWindowTabMenuItemUnderline"] = "#000A84FF",
+        ["SettingsWindowTextBoxBackgroundColor"] = "#FF2C2C2E",
+        ["SettingsWindowTextBoxBorderColor"] = "#FF3A3A3C",
+        ["SettingsWindowBorderColor"] = "#FF38383A",
+        ["SettingsWindowBorderBrushColor"] = "#FF38383A",
+    };
+
     public static int Run(string srcDir, string outDir)
     {
         if (Directory.Exists(outDir)) Directory.Delete(outDir, true);
@@ -62,6 +82,8 @@ static class ThemeGen
         string xaml = RecolorText(File.ReadAllText(themeFile));
         foreach (var kv in CornerRadii)
             xaml = SetKeyed(xaml, kv.Key, kv.Value);
+        foreach (var kv in SettingsBrushes)
+            xaml = SetBrush(xaml, kv.Key, kv.Value);
         xaml = SetKeyed(xaml, "ThemeDisplayName", DisplayName);
         xaml = SetKeyed(xaml, "themeName", ThemeName);
         xaml = Regex.Replace(xaml, "RadiusX=\"0\"(\\s+)RadiusY=\"0\"(\\s+Rect=\"0,0,68,68\")", "RadiusX=\"15\"$1RadiusY=\"15\"$2"); // iOS icon corner ≈ 22% of 68px
@@ -79,6 +101,14 @@ static class ThemeGen
         var re = new Regex($"(x:Key=\"{Regex.Escape(key)}\">)[^<]*(<)");
         if (!re.IsMatch(xaml)) throw new Exception("theme key not found: " + key);
         return re.Replace(xaml, m => m.Groups[1].Value + value + m.Groups[2].Value);
+    }
+
+    // only the SolidColorBrush entry (the same key also appears in the category dictionary as plain text)
+    static string SetBrush(string xaml, string key, string argb)
+    {
+        var re = new Regex($"(<av:SolidColorBrush\\s+x:Key=\"{Regex.Escape(key)}\">)[^<]*(<)");
+        if (!re.IsMatch(xaml)) throw new Exception("theme brush not found: " + key);
+        return re.Replace(xaml, m => m.Groups[1].Value + argb + m.Groups[2].Value);
     }
 
     static string RecolorText(string text) =>
