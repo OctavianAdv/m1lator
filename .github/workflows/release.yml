@@ -27,7 +27,7 @@ jobs:
           $out = 'dist/m1lator'
           New-Item -ItemType Directory -Force $out | Out-Null
           Copy-Item -Recurse bin, scripts $out
-          Copy-Item Install.bat, Uninstall.bat, Update.bat, Hypervisor-Off.bat, Hypervisor-On.bat, README.md, VERSION $out
+          Copy-Item Install.bat, Uninstall.bat, Update.bat, Hypervisor-Off.bat, Hypervisor-On.bat, Diagnose.bat, README.md, VERSION $out
           Compress-Archive -Path "$out/*" -DestinationPath "dist/m1lator-${{ github.ref_name }}.zip"
 
       - uses: softprops/action-gh-release@v2

@@ -25,6 +25,12 @@ BlueStacks 4 **nu pornește** cât timp hypervisor-ul Windows e activ (Memory In
 Poți folosi și direct **`Hypervisor-Off.bat`**, iar ca să-l repornești, **`Hypervisor-On.bat`**. Ambele cer restart.
 Oprirea scade puțin securitatea Windows (protecția kernel-ului împotriva driverelor malițioase).
 
+## FPS mic / sacadări? → `Diagnose.bat`
+
+Dublu-click pe **`Diagnose.bat`**. Pe Desktop apare `m1lator-diagnoza-....txt`, cu probleme marcate **[PROBLEMA]** și ce trebuie făcut pentru fiecare. Nu modifică nimic.
+Verifică: hypervisor-ul, virtualizarea din BIOS, modul „raw” (1 nucleu), dacă se folosește placa video integrată în loc de cea dedicată, HDD vs SSD, RAM, laptop pe baterie, Game DVR, setările fiecărei instanțe.
+Trimite fișierul ăsta când ceri ajutor.
+
 ## Dezinstalare
 
 Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
@@ -42,7 +48,7 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
 | **Nuclee** | vCPU = P-cores − 2 (maximum 6), ca randarea și input-ul să aibă mereu 2 nuclee libere |
 | **Fără sacadări** | Oprită curățarea forțată a memoriei, care rula la fiecare 15 secunde și dădea lag în interfață |
-| **Randare** | OpenGL, decodare ASTC cu cache, GPU dedicat forțat |
+| **Randare** | OpenGL, GPU dedicat forțat (și din setările Windows, pentru laptopuri). Texturi ASTC (jocuri Unity, ex. Standoff 2): decodare hardware dacă placa video o suportă, altfel software cu cache |
 | **Fără telemetrie** | Toate statisticile trimise către cloud sunt oprite, la fel și scanarea proceselor (SecurityMetrics) |
 | **Fără reclame** | Promoții, recomandări și sfaturi oprite. Actualizările automate sunt blocate, ca să nu șteargă mod-ul. |
 | **Securitate** | Blocat canalul prin care BlueStacks putea descărca și rula programe de la distanță |

@@ -10,7 +10,7 @@
 param(
     [int]$Fps = 240,             # default cap per instance; the slider goes to 1000 once patches are installed
     [switch]$ShowFps,            # native FPS overlay
-    [int]$AstcOption = 2,        # 0 off, 1 software, 2 software+cache, 3 hardware
+    [int]$AstcOption = -1,       # -1 auto (3 if GPU supports it, else 2), 0 off, 1 software, 2 software+cache, 3 hardware
     [switch]$SkipTheme
 )
 . "$PSScriptRoot\common.ps1"
@@ -57,15 +57,28 @@ foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     Set-Reg "$g\Config" 'FPS' $Fps
     Set-Reg "$g\Config" 'ShowFPS' ([int][bool]$ShowFps)
     Set-Reg "$g\Config" 'GlRenderMode' 1          # OpenGL
-    Set-Reg $g 'ASTCOption' $AstcOption
+    # ASTC textures (Unity games): hardware decode when BlueStacks detected GPU support (e.g. Intel iGPU),
+    # otherwise software decode + cache so each texture is decoded only once per session
+    $astc = if ($AstcOption -ge 0) { $AstcOption }
+            elseif ((Get-ItemProperty $g -Name 'IsHardwareAstcSupported' -ErrorAction SilentlyContinue).IsHardwareAstcSupported -eq 1) { 3 }
+            else { 2 }
+    Set-Reg $g 'ASTCOption' $astc
 
     # boot params carry fps= to the guest (BlueStacks adds it the same way)
     $bp = (Get-ItemProperty $g).BootParameters
     $new = if ($bp -match '(^| )fps=\d+') { $bp -replace '(^| )fps=\d+', "`$1fps=$Fps" } else { "$bp fps=$Fps" }
     Set-Reg $g 'BootParameters' $new 'String'
-    Write-Host "$vm : FPS=$Fps, high framerate mode on, ASTC=$AstcOption, OpenGL"
+    Write-Host "$vm : $vcpus vCPUs, FPS=$Fps, high framerate mode on, ASTC=$astc, OpenGL"
 }
 Set-Reg "$BsKey\Config" 'ForceDedicatedGPU' 1
+
+# Windows per-app GPU preference: laptops with iGPU + dGPU otherwise often render BlueStacks on the weak iGPU
+$gpuKey = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+if (-not (Test-Path $gpuKey)) { New-Item $gpuKey -Force | Out-Null }
+foreach ($exe in (Join-Path $PF 'HD-Player.exe'), (Join-Path $Client 'Bluestacks.exe')) {
+    Set-Reg $gpuKey $exe 'GpuPreference=2;' 'String'
+}
+Write-Host 'GPU: high performance for HD-Player / Bluestacks'
 
 # ---------------------------------------------------------------- shortcuts: only fullscreen (F11)
 # BlueStacks loads UserDefinedShortcuts instead of DefaultShortcuts when it is set; anything missing is simply inactive
