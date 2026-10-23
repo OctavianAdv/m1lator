@@ -75,6 +75,12 @@ if ($plan) {
     Write-Host "power plan while playing: $planName"
 } else { Write-Host 'power plan: could not create a performance plan, keeping the current one' }
 
+# ---------------------------------------------------------------- BlueStacks cloud off
+# Every BlueStacks server call (stats, usage, GRM rules, post-boot, promotions, country lookups...) is built from
+# Config\Host. A closed local port makes them all fail instantly. Play Store / games are unaffected (they go
+# through Android). Lost: cloud device-profile list, help pages. Undo: Uninstall.bat restores the original Host.
+Set-Reg "$BsKey\Config" 'Host' 'http://127.0.0.1:9' 'String'
+
 # ---------------------------------------------------------------- remaining telemetry switches (registry-gated)
 Set-Reg "$BsKey\Config" 'SystemInfoStats2' 0          # device capabilities report at every boot
 Set-Reg "$BsKey\Config" 'SystemStats' 0
@@ -104,8 +110,12 @@ $tools = Get-M1latorTools
 # FPS 30, High framerate mode off (turn it on per session in Settings -> Engine, slider up to 1000).
 $highFps = [int]($Fps -gt 60)
 $pcores = [int]((& $tools.Tool pcores) | Select-Object -First 1)
-$vcpus = [Math]::Max(2, [Math]::Min(6, $pcores - 2))
-Write-Host "performance cores: $pcores -> $vcpus vCPUs per instance"
+$pphys = [int]((& $tools.Tool pcores-physical) | Select-Object -First 1)
+# with Hyper-Threading one whole P-core stays free (render + input threads don't share it with a vCPU),
+# without it two P-cores stay free. e.g. 6P+HT -> 5, 8P (HT off) -> 6, 8P+HT -> 6 (cap)
+$reserve = if ($pcores -gt $pphys) { 1 } else { 2 }
+$vcpus = [Math]::Max(2, [Math]::Min(6, $pphys - $reserve))
+Write-Host "performance cores: $pphys physical / $pcores threads -> $vcpus vCPUs per instance"
 
 foreach ($vm in (Get-ItemProperty "$BsKey\Config").VmList) {
     $g = "$BsKey\Guests\$vm"

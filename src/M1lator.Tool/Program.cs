@@ -11,6 +11,11 @@ if (args.Length == 1 && args[0] == "pcores")
     Console.WriteLine(CpuInfo.PerformanceLogicalProcessors());
     return 0;
 }
+if (args.Length == 1 && args[0] == "pcores-physical")
+{
+    Console.WriteLine(CpuInfo.PerformancePhysicalCores());
+    return 0;
+}
 
 Console.Error.WriteLine("usage: m1lator patch <originalDir> <outDir> <boostDll> | pcores");
 return 2;

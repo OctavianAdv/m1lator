@@ -40,6 +40,8 @@ if ($engine -eq 'raw') {
 Section 'Procesor / memorie / alimentare'
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
 $pcores = try { [int]((& (Join-Path $Root 'bin\M1lator.Tool.exe') pcores) | Select-Object -First 1) } catch { 0 }
+$pphys = try { [int]((& (Join-Path $Root 'bin\M1lator.Tool.exe') pcores-physical) | Select-Object -First 1) } catch { 0 }
+$recVcpu = if ($pphys -gt 0) { [Math]::Max(2, [Math]::Min(6, $pphys - $(if ($pcores -gt $pphys) { 1 } else { 2 }))) } else { 0 }
 Info "$($cpu.Name.Trim()) - $($cpu.NumberOfCores) nuclee, $($cpu.NumberOfLogicalProcessors) thread-uri, P-cores: $pcores"
 $os = Get-CimInstance Win32_OperatingSystem
 $totalGb = [math]::Round($cs.TotalPhysicalMemory / 1GB, 1); $freeGb = [math]::Round($os.FreePhysicalMemory / 1MB, 1)
@@ -91,12 +93,14 @@ foreach ($vm in (Reg "$BsKey\Config" 'VmList')) {
     $dpi = if ((Reg $g 'BootParameters') -match 'DPI=(\d+)') { $Matches[1] } else { '?' }
     Info ("{0} ({1}): {2} vCPU, {3} MB RAM, {4}x{5} DPI {6}, FPS {7} (high fps {8}), ASTC {9}, render {10}, GL mode {11}" -f $vm, (Reg $c 'DisplayName'), $vcpu, $mem, $w, $h, $dpi, (Reg $c 'FPS'), (Reg $c 'EnableHighFPS'), (Reg $g 'ASTCOption'), $(if ((Reg $c 'GlRenderMode') -eq 4) { 'DirectX' } else { 'OpenGL' }), (Reg $c 'GlMode'))
     if ($mem -and $mem -lt 3072) { Bad "$vm are doar $mem MB RAM." 'Setari BlueStacks -> Engine -> Memory: 4096 MB (daca PC-ul are 8 GB+).' }
-    if ($vcpu -and $vcpu -lt 4 -and $pcores -ge 6) { Bad "$vm are doar $vcpu vCPU." 'Ruleaza din nou Install.bat (seteaza automat).' }
+    if ($vcpu -and $recVcpu -and $vcpu -gt $recVcpu) { Bad "$vm are $vcpu vCPU (recomandat $recVcpu): fire de randare/input sufocate -> input lag, FPS instabil." "Ruleaza din nou Install.bat, sau Setari -> Engine -> CPU cores: $recVcpu." }
+    elseif ($vcpu -and $recVcpu -and $vcpu -lt $recVcpu - 1) { Bad "$vm are doar $vcpu vCPU (recomandat $recVcpu)." 'Ruleaza din nou Install.bat (seteaza automat).' }
     if ($w -and $h -and ([int]$w * [int]$h) -gt 1920 * 1080) { Info "$vm ruleaza peste 1080p: FPS mai mic. Pentru FPS maxim incearca 1280x720 sau 1280x960." }
 }
 
 # ---------------------------------------------------------------- m1lator install state
 Section 'm1lator'
+if ((Reg "$BsKey\Config" 'Host') -eq 'http://127.0.0.1:9') { Ok 'Cloud BlueStacks blocat (fara telemetrie)' } else { Bad 'Cloud-ul BlueStacks e activ (telemetrie).' 'Ruleaza Update.bat / Install.bat (versiunea 1.9+).' }
 foreach ($f in (Join-Path $PF 'HD-Player.exe'), (Join-Path $PF 'HD-Common.dll'), (Join-Path $Client 'Bluestacks.exe')) {
     if ((Get-AuthenticodeSignature $f).Status -eq 'Valid') { Bad "$(Split-Path $f -Leaf) e originalul (patch-urile nu sunt instalate)." 'Ruleaza Install.bat.' }
 }

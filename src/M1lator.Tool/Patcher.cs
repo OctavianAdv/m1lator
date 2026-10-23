@@ -245,6 +245,57 @@ static class Patcher
 
         // "press F11 to exit full screen" toast drawn by the player itself
         Stub(Method(m, "BlueStacks.Player.FullScreenToast", "Show"));
+
+        PatchPlayerInput(m, boostModule: apply.Module);
+    }
+
+    static void PatchPlayerInput(ModuleDefMD m, ModuleDef boostModule)
+    {
+        // Raw mouse (games that capture the mouse): coalesced, allocation-free handler in M1lator.Boost
+        var rawHandle = boostModule.Find("M1lator.Boost.RawInput", false)?.FindMethod("Handle") ?? throw new Exception("RawInput.Handle missing");
+        var raw = Method(m, "BlueStacks.Player.InputMapper", "HandleRawInput");      // this, IntPtr lParam
+        raw.Body = new CilBody();
+        raw.Body.Instructions.Add(OpCodes.Ldarg_1.ToInstruction());
+        raw.Body.Instructions.Add(OpCodes.Call.ToInstruction(m.Import(rawHandle)));
+        raw.Body.Instructions.Add(OpCodes.Ret.ToInstruction());
+        Console.WriteLine("  InputMapper.HandleRawInput -> coalesced raw mouse");
+
+        // Key auto-repeat: if (KeyRepeat.IsSuppressed() && pressed && sKeyStateSet.ContainsKey(key)) return false;
+        var vm = Type(m, "BlueStacks.Player.VMWindow");
+        var uks = Method(vm, "UpdateKeyState");                                     // this, Keys key, bool pressed
+        var loadSet = uks.Body.Instructions.First(i => i.OpCode == OpCodes.Ldsfld && i.Operand is IField f && f.Name == "sKeyStateSet");
+        var contains = uks.Body.Instructions.First(i => (i.OpCode == OpCodes.Callvirt || i.OpCode == OpCodes.Call) && i.Operand is IMethod im && im.Name == "ContainsKey");
+        var suppressed = boostModule.Find("M1lator.Boost.KeyRepeat", false)?.FindMethod("IsSuppressed") ?? throw new Exception("KeyRepeat missing");
+        var orig = uks.Body.Instructions[0];
+        var pre = new[]
+        {
+            OpCodes.Call.ToInstruction(m.Import(suppressed)), OpCodes.Brfalse.ToInstruction(orig),
+            OpCodes.Ldarg.ToInstruction(uks.Parameters[2]), OpCodes.Brfalse.ToInstruction(orig),
+            new Instruction(OpCodes.Ldsfld, loadSet.Operand), OpCodes.Ldarg.ToInstruction(uks.Parameters[1]),
+            new Instruction(contains.OpCode, contains.Operand), OpCodes.Brfalse.ToInstruction(orig),
+            OpCodes.Ldc_I4_0.ToInstruction(), OpCodes.Ret.ToInstruction(),
+        };
+        for (int i = 0; i < pre.Length; i++) uks.Body.Instructions.Insert(i, pre[i]);
+        Console.WriteLine("  VMWindow.UpdateKeyState -> ignore auto-repeat of held keys");
+
+        // "user-active" report every 10 s from every mouse/key event (new thread + HTTP each time, usage timeline)
+        Stub(Method(vm, "UpdateUserActivityStatus"));
+
+        // Sensors BlueStacks 4 doesn't implement (Android asks for magnetometer/orientation): ignore quietly
+        // instead of a synchronous error log line several times per second.
+        var sensors = Type(m, "BlueStacks.Player.SensorDevice");
+        var lookup = Method(sensors, "LookupState");
+        foreach (var name in new[] { "EnableHandlerImpl", "SetDelayHandlerImpl" })
+        {
+            var md = Method(sensors, name);                                          // this, Type sensor, ...
+            var first = md.Body.Instructions[0];
+            md.Body.Instructions.Insert(0, OpCodes.Ldarg_0.ToInstruction());
+            md.Body.Instructions.Insert(1, OpCodes.Ldarg_1.ToInstruction());
+            md.Body.Instructions.Insert(2, OpCodes.Call.ToInstruction(lookup));
+            md.Body.Instructions.Insert(3, OpCodes.Brtrue.ToInstruction(first));
+            md.Body.Instructions.Insert(4, OpCodes.Ret.ToInstruction());
+        }
+        Console.WriteLine("  SensorDevice: unsupported sensors ignored without log spam");
     }
 
     // ---------------------------------------------------------------- helpers
