@@ -135,6 +135,12 @@ elseif (Test-Path $adb) {
             Select-Object -Last 25
         if ($auth) { Info "$vm : erori de autentificare din Android:"; $auth | ForEach-Object { Line "      $($_.Line)" } }
         else { Info "$vm : nicio eroare de autentificare in log (incearca logarea, apoi ruleaza din nou Diagnose.bat)." }
+        # game-side exceptions (Unity writes them to logcat with tag "Unity"), e.g. Standoff 2 SignIn CryptographicException
+        $game = & $adb -s $target logcat -d -v time 2>$null |
+            Select-String -Pattern 'CryptographicException|Exception|AndroidRuntime' |
+            Where-Object { $_.Line -match 'Unity|axlebolt|standoff|Cryptographic|AndroidRuntime' } |
+            Select-Object -Last 40
+        if ($game) { Info "$vm : erori din jocuri (Unity):"; $game | ForEach-Object { Line "      $($_.Line)" } }
     }
 }
 

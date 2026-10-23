@@ -40,6 +40,17 @@ BlueStacks 4 are însă un Android System WebView din 2016 (versiunea 52), iar G
 2. Încearcă logarea din **Settings → Accounts → Add account → Google**, nu din pop-up-ul BlueStacks.
 3. Dacă tot nu merge: lasă instanța pornită, încearcă logarea, apoi rulează **`Diagnose.bat`**. Secțiunea „Google Play / cont Google” arată eroarea exactă din Android. Trimite fișierul.
 
+## Standoff 2: „SignIn (CryptographicException)”
+
+Eroarea vine din joc, la logare: nu poate decripta datele de logare salvate, sau verificarea de securitate eșuează.
+
+1. În Android: **Settings → Date & time** → pornește „Automatic date & time”.
+2. Repornește instanța și mai încearcă o dată. Uneori e o problemă de server la Standoff 2.
+3. Dacă tot apare: **Settings → Apps → Standoff 2 → Storage → Clear cache**. Apoi încearcă din nou.
+4. Ultima variantă: **Clear data**.
+   ⚠️ **Înainte, verifică dacă contul e legat** de Google / Facebook / e-mail. Un cont de tip „guest” nelegat se poate pierde la Clear data.
+5. Dacă nu se rezolvă: cu instanța pornită, după eroare, rulează **`Diagnose.bat`** și trimite fișierul. Secțiunea „erori din jocuri (Unity)” arată excepția completă.
+
 ## Dezinstalare
 
 Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.

@@ -53,8 +53,9 @@ namespace M1lator.Client
         {
             try
             {
-                Hide(Get(topBar, "mVersionText"));
-                Hide(Get(topBar, "mTitleIcon"));
+                // BlueStacks re-shows these when tabs change (AppTabButtons): keep them hidden
+                KeepHidden(Get(topBar, "mVersionText"));
+                KeepHidden(Get(topBar, "mTitleIcon"));
                 if (Get(topBar, "mTitleText") is TextBlock title) MakeWordmark(title);
             }
             catch { }
@@ -208,6 +209,14 @@ namespace M1lator.Client
         static void Hide(object element)
         {
             if (element is UIElement ui) ui.Visibility = Visibility.Collapsed;
+        }
+
+        static void KeepHidden(object element)
+        {
+            if (!(element is UIElement ui)) return;
+            ui.Visibility = Visibility.Collapsed;
+            DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(UIElement))
+                .AddValueChanged(ui, (s, e) => { if (ui.Visibility != Visibility.Collapsed) ui.Visibility = Visibility.Collapsed; });
         }
 
         static string GetSetting(string name, string fallback)
