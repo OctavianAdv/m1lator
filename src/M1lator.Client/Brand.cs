@@ -264,18 +264,23 @@ namespace M1lator.Client
             var shift = new TranslateTransform();
             brush.RelativeTransform = shift;
             title.Foreground = brush;
-            var slide = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(4)) { RepeatBehavior = RepeatBehavior.Forever };
-            Timeline.SetDesiredFrameRate(slide, 30);   // smooth enough for a logo, keeps the UI thread light
-            shift.BeginAnimation(TranslateTransform.XProperty, slide);
+            // NOT a forever animation: BlueStacks' window is layered (AllowsTransparency), so every animation frame makes
+            // WPF re-render and hand the whole window to Windows (GPU -> CPU copy) - a constant cost while gaming.
+            // The rainbow flows twice at startup and once whenever the mouse is over the logo; otherwise it is static.
+            void Flow(int times)
+            {
+                var slide = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(3)) { RepeatBehavior = new RepeatBehavior(times) };
+                Timeline.SetDesiredFrameRate(slide, 30);
+                shift.BeginAnimation(TranslateTransform.XProperty, slide);
+            }
+            Flow(2);
+            title.MouseEnter += (s, e) => Flow(1);
 
-            // soft glow whose colour cycles through the same palette
-            var glow = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Opacity = 0.55 };
-            var cycle = new ColorAnimationUsingKeyFrames { Duration = TimeSpan.FromSeconds(4), RepeatBehavior = RepeatBehavior.Forever };
-            for (int i = 0; i < colours.Length; i++)
-                cycle.KeyFrames.Add(new LinearColorKeyFrame((Color)ColorConverter.ConvertFromString(colours[i]), KeyTime.FromPercent(i / (double)(colours.Length - 1))));
-            Timeline.SetDesiredFrameRate(cycle, 30);
-            glow.BeginAnimation(DropShadowEffect.ColorProperty, cycle);
-            title.Effect = glow;
+            // static soft glow in the theme accent
+            Color glowColor;
+            try { glowColor = (Color)ColorConverter.ConvertFromString(GetSetting("Accent", "#0A84FF")); }
+            catch { glowColor = Color.FromRgb(0x0A, 0x84, 0xFF); }
+            title.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Opacity = 0.5, Color = glowColor };
 
             // BlueStacks writes the instance name into the title later (MainWindow.SetWindowTitle): keep ours
             DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock))

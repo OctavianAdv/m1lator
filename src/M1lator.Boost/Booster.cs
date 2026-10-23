@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
@@ -45,6 +46,11 @@ namespace M1lator.Boost
                     int dpi = GetInt(key, "Dpi", 440);
                     if (dpi > 0) Try("DPI " + dpi, () => ForceDpi(dpi));
                     if (GetInt(key, "BoostCompanions", 1) == 1) BoostCompanionsLater();
+                    // fewer blocking full GCs on HD-Player's managed threads (input handling is .NET code)
+                    Try("GC low latency", () => { System.Runtime.GCSettings.LatencyMode = (System.Runtime.GCLatencyMode)3; return true; });   // SustainedLowLatency
+                    if (GetInt(key, "PerfLog", 1) == 1) PerfSampler.Start();
+                    string vm = VmName();
+                    if (vm != null) AndroidTune.StartLater(vm, Log);
                 }
             }
             catch (Exception ex)
@@ -52,6 +58,12 @@ namespace M1lator.Boost
                 Log.Add("fatal: " + ex.Message);
             }
             WriteLog();
+        }
+
+        static string VmName()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            return args.Length >= 2 && args[1].IndexOfAny(new[] { '\\', '/', '"' }) < 0 ? args[1] : null;
         }
 
         static void Try(string name, Func<bool> action)
@@ -232,13 +244,26 @@ namespace M1lator.Boost
             return v as string ?? def;
         }
 
-        static void WriteLog()
+        static void WriteLog() => AppendLog(string.Join("; ", Log.ToArray()));
+
+        static readonly object LogLock = new object();
+
+        /// <summary>One line in ProgramData\BlueStacks_bgp64\Logs\m1lator.log (kept under ~1 MB).</summary>
+        public static void AppendLog(string text)
         {
             try
             {
-                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"BlueStacks_bgp64\Logs");
-                File.AppendAllText(Path.Combine(dir, "m1lator.log"),
-                    DateTime.Now.ToString("s") + " HD-Player pid " + Process.GetCurrentProcess().Id + ": " + string.Join("; ", Log.ToArray()) + Environment.NewLine);
+                lock (LogLock)
+                {
+                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"BlueStacks_bgp64\Logs\m1lator.log");
+                    var info = new FileInfo(path);
+                    if (info.Exists && info.Length > 1024 * 1024)
+                    {
+                        string[] lines = File.ReadAllLines(path);
+                        File.WriteAllLines(path, lines.Skip(lines.Length / 2).ToArray());   // keep the newest half
+                    }
+                    File.AppendAllText(path, DateTime.Now.ToString("s") + " HD-Player pid " + Process.GetCurrentProcess().Id + ": " + text + Environment.NewLine);
+                }
             }
             catch { }
         }

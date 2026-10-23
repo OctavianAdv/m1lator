@@ -43,4 +43,5 @@ foreach ($sub in $Files.Keys) {
 Copy-Item (Join-Path $Out 'ProgramFiles\M1lator.Boost.dll') (Join-Path $PF 'M1lator.Boost.dll') -Force
 Write-Host 'installed: ProgramFiles\M1lator.Boost.dll'
 Copy-Item (Join-Path $Out 'Client\M1lator.Client.dll') (Join-Path $Client 'M1lator.Client.dll') -Force
-Write-Host 'installed: Client\M1lator.Client.dll'
+Copy-Item (Join-Path $Out 'Client\M1lator.Boost.dll') (Join-Path $Client 'M1lator.Boost.dll') -Force   # client HD-Common logger
+Write-Host 'installed: Client\M1lator.Client.dll, Client\M1lator.Boost.dll'

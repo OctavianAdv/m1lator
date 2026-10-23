@@ -106,8 +106,13 @@ foreach ($f in (Join-Path $PF 'HD-Player.exe'), (Join-Path $PF 'HD-Common.dll'),
 }
 if (Test-Path (Join-Path $PF 'M1lator.Boost.dll')) { Ok 'M1lator.Boost instalat' } else { Bad 'M1lator.Boost lipseste.' 'Ruleaza Install.bat.' }
 $logs = Join-Path $DataDir 'Logs'
-$boost = Get-Content (Join-Path $logs 'm1lator.log') -Tail 3 -ErrorAction SilentlyContinue
-if ($boost) { $boost | ForEach-Object { Info "boost: $_" } } else { Info 'm1lator.log nu exista inca (BlueStacks nu a pornit de la instalare).' }
+$m1log = @(Get-Content (Join-Path $logs 'm1lator.log') -ErrorAction SilentlyContinue)
+if ($m1log) {
+    $m1log | Where-Object { $_ -notmatch ': (perf|Android\w*: android tune)' } | Select-Object -Last 3 | ForEach-Object { Info "boost: $_" }
+    $m1log | Where-Object { $_ -match 'android tune' } | Select-Object -Last 2 | ForEach-Object { Info $_ }
+    $perf = @($m1log | Where-Object { $_ -match ': perf:' } | Select-Object -Last 10)
+    if ($perf) { Info 'masuratori CPU (ultimele 10 minute de joc):'; $perf | ForEach-Object { Line "      $_" } }
+} else { Info 'm1lator.log nu exista inca (BlueStacks nu a pornit de la instalare).' }
 
 # ---------------------------------------------------------------- Google sign-in (runs inside Android)
 Section 'Google Play / cont Google'

@@ -29,13 +29,16 @@ static class Patcher
         var brand = ModuleDefMD.Load(File.ReadAllBytes(clientDll)).Find("M1lator.Client.Brand", false)
             ?? throw new Exception("M1lator.Client.Brand not found in " + clientDll);
 
+        var logFlush = boost.Find("M1lator.Boost.LogPolicy", false)?.FindMethod("Flush")
+            ?? throw new Exception("LogPolicy.Flush not found in " + boostDll);
         foreach (var dir in new[] { "ProgramFiles", "Client" })
-            PatchFile(originalDir, outDir, dir, "HD-Common.dll", PatchHdCommon);
+            PatchFile(originalDir, outDir, dir, "HD-Common.dll", m => { PatchHdCommon(m); PatchLogger(m, logFlush); });
         PatchFile(originalDir, outDir, "Client", "Bluestacks.exe", m => PatchClient(m, brand));
         PatchFile(originalDir, outDir, "ProgramFiles", "HD-Agent.exe", PatchAgent);
         PatchFile(originalDir, outDir, "ProgramFiles", "HD-Player.exe", m => PatchPlayer(m, applyMethod, stretchMethod));
 
         File.Copy(boostDll, Path.Combine(outDir, "ProgramFiles", "M1lator.Boost.dll"), true);
+        File.Copy(boostDll, Path.Combine(outDir, "Client", "M1lator.Boost.dll"), true);       // client's HD-Common uses LogPolicy
         File.Copy(clientDll, Path.Combine(outDir, "Client", "M1lator.Client.dll"), true);
         Console.WriteLine("all patches applied");
         return 0;
@@ -55,6 +58,24 @@ static class Patcher
     }
 
     // ---------------------------------------------------------------- HD-Common.dll
+
+    // Logger.Print(level, tag, fmt, args) flushes the file after every line; route that through LogPolicy.Flush
+    // (errors/warnings immediately, the rest at most twice a second).
+    static void PatchLogger(ModuleDefMD m, MethodDef logFlush)
+    {
+        var print = Type(m, "BlueStacks.Common.Logger").Methods
+            .Single(x => x.Name == "Print" && x.Parameters.Count == 4 && x.Parameters[0].Type.FullName == "System.String");
+        var flushes = print.Body.Instructions
+            .Where(i => i.OpCode == OpCodes.Callvirt && i.Operand is IMethod im && im.Name == "Flush" && im.DeclaringType.FullName.EndsWith("Writer"))
+            .ToList();
+        Expect(flushes.Count == 1, "Logger.Print writer flush");
+        var ins = print.Body.Instructions;
+        int at = ins.IndexOf(flushes[0]);
+        flushes[0].OpCode = OpCodes.Ldarg_0;                                  // stack: writer, level
+        flushes[0].Operand = null;
+        ins.Insert(at + 1, OpCodes.Call.ToInstruction(m.Import(logFlush)));   // LogPolicy.Flush(writer, level)
+        Console.WriteLine("  Logger.Print -> buffered log writes (errors flushed at once)");
+    }
 
     static void PatchHdCommon(ModuleDefMD m)
     {

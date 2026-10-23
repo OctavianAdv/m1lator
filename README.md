@@ -89,6 +89,11 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. La închiderea emulatorului, FPS revine la **30** și High framerate mode se oprește singur. |
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
 | **Input** | Mișcările de mouse merg spre Android una câte una, ca în BlueStacks original, dar fără alocare de memorie la fiecare eveniment. Tastele ținute apăsate nu mai trimit repetări inutile. Opțional (`CoalesceMouse` = 1): mișcările care vin în rafală se adună într-una singură. Poate ajuta la mouse-uri de 4000–8000 Hz, dar în Standoff 2 a făcut ochirea sacadată. |
+| **Android curățat** | O singură dată per instanță, după prima pornire: animațiile Android sunt oprite (interfață instantanee), iar aplicațiile de fundal inutile sunt dezactivate (magazinul și contul BlueStacks, Feedback, Calendar, Print, TTS, Ceas, Telefon). Rămân: Google Play / Play Games (logare), BS-Services, camera, ghidul de controale. Se poate anula: `AndroidTune` = 0, apoi pornești instanța o dată. |
+| **Log-uri** | BlueStacks scria pe disc la fiecare linie de log, din orice fir, inclusiv cele de input. Acum log-urile se scriu cel mult de 2 ori pe secundă; erorile se scriu imediat. |
+| **GC** | HD-Player rulează cu „low latency garbage collection”: mai puține pauze în codul care procesează mouse-ul și tastatura. |
+| **Interfața în timpul jocului** | Logo-ul RGB curge doar la pornire și când treci cu mouse-ul peste el. Animația continuă forța redesenarea întregii ferestre de 30 de ori pe secundă, chiar în timpul jocului. |
+| **Măsurători** | La fiecare minut, `m1lator.log` notează cât procesor folosește HD-Player și care sunt cele mai încărcate fire. Totul rămâne pe PC, nimic nu pleacă. `Diagnose.bat` le afișează. |
 | **Senzori** | Android cere senzori pe care BlueStacks 4 nu îi are (magnetometru, orientare). Cererile sunt ignorate în liniște, fără să mai fie scrise erori în log de mai multe ori pe secundă. |
 | **Nuclee** | vCPU = nuclee P fizice − 2 (fără Hyper-Threading) sau − 1 (cu Hyper-Threading), maximum 6, ca randarea și input-ul să aibă mereu nuclee libere. Toate nucleele pentru Android ar însemna mai puține FPS și input lag, pentru că firele de randare și de input ar aștepta după vCPU. |
 | **Procese BlueStacks** | BstkSVC (disc/rețea pentru Android) rulează la prioritate mai mare și fără throttling de energie. Nici interfața nu mai are throttling. |
@@ -118,6 +123,8 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
 | `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
 | `Dpi` | DWORD | 440 | DPI-ul Android la fiecare pornire. 0 = nu-l schimba |
+| `AndroidTune` | DWORD | 1 | 0 = anulează curățarea Android la următoarea pornire a instanței (aplicațiile reactivate, animațiile 1x) |
+| `PerfLog` | DWORD | 1 | 0 = fără măsurători CPU în `m1lator.log` |
 | `CoalesceMouse` | DWORD | 0 | 1 = mișcările de mouse venite în rafală se adună (experimental; în Standoff 2 dă ochire sacadată) |
 | `SuppressKeyRepeat` | DWORD | 1 | 0 = tastele ținute apăsate trimit repetări (ca în original) |
 | `BoostCompanions` | DWORD | 1 | 0 = nu umbla la prioritatea BstkSVC / interfață |

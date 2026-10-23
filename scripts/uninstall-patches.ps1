@@ -13,3 +13,4 @@ Get-ChildItem "$Orig\ProgramFiles" | ForEach-Object { Copy-Item $_.FullName (Joi
 Get-ChildItem "$Orig\Client"       | ForEach-Object { Copy-Item $_.FullName (Join-Path $Client $_.Name) -Force; Write-Host "restored: Client\$($_.Name)" }
 Remove-Item (Join-Path $PF 'M1lator.Boost.dll') -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Client 'M1lator.Client.dll') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $Client 'M1lator.Boost.dll') -ErrorAction SilentlyContinue
