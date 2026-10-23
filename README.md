@@ -49,7 +49,7 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Notificări** | Toate oprite: popup-uri Windows, notificări din cloud, iconița de notificări (clopoțelul), mesajele „apasă F11 ca să ieși” |
 | **FPS** | Setări → Engine → bifează **High framerate mode**. Slider-ul merge până la **1000 FPS**. La închiderea emulatorului, FPS revine la **30** și High framerate mode se oprește singur. |
 | **Latență** | Timer de sistem de 1 ms, prioritate High, fără throttling de energie, rulează doar pe P-cores (la procesoarele Intel 12th gen sau mai noi). Thread-ul de input are prioritate MMCSS „Games”. |
-| **Input** | Mișcările de mouse din joc (ochire) se adună când vin mai repede decât poate procesa emulatorul. Nu se pierde nicio mișcare, doar nu mai sunt trimise în Android mii de evenimente pe secundă (mouse-uri de 1000–8000 Hz). Tastele ținute apăsate nu mai trimit repetări inutile. |
+| **Input** | Mișcările de mouse merg spre Android una câte una, ca în BlueStacks original, dar fără alocare de memorie la fiecare eveniment. Tastele ținute apăsate nu mai trimit repetări inutile. Opțional (`CoalesceMouse` = 1): mișcările care vin în rafală se adună într-una singură. Poate ajuta la mouse-uri de 4000–8000 Hz, dar în Standoff 2 a făcut ochirea sacadată. |
 | **Senzori** | Android cere senzori pe care BlueStacks 4 nu îi are (magnetometru, orientare). Cererile sunt ignorate în liniște, fără să mai fie scrise erori în log de mai multe ori pe secundă. |
 | **Nuclee** | vCPU = nuclee P fizice − 2 (fără Hyper-Threading) sau − 1 (cu Hyper-Threading), maximum 6, ca randarea și input-ul să aibă mereu nuclee libere. Toate nucleele pentru Android ar însemna mai puține FPS și input lag, pentru că firele de randare și de input ar aștepta după vCPU. |
 | **Plan de energie** | Cât timp joci, Windows trece pe **m1lator Ultimate Performance**. La închiderea ultimei instanțe, revine la planul tău. |
@@ -80,7 +80,7 @@ Le setezi în registry, la `HKLM\SOFTWARE\BlueStacks_bgp64\m1lator` (toate sunt 
 | `StretchFullscreen` | DWORD | 1 | 0 = în fullscreen păstrează benzile negre (proporțiile originale) |
 | `MmcssInputThread` | DWORD | 1 | 0 = fără prioritate MMCSS pentru thread-ul de input |
 | `Dpi` | DWORD | 440 | DPI-ul Android la fiecare pornire. 0 = nu-l schimba |
-| `CoalesceMouse` | DWORD | 1 | 0 = fiecare mișcare de mouse e trimisă separat (ca în BlueStacks original) |
+| `CoalesceMouse` | DWORD | 0 | 1 = mișcările de mouse venite în rafală se adună (experimental; în Standoff 2 dă ochire sacadată) |
 | `SuppressKeyRepeat` | DWORD | 1 | 0 = tastele ținute apăsate trimit repetări (ca în original) |
 | `BoostCompanions` | DWORD | 1 | 0 = nu umbla la prioritatea BstkSVC / interfață |
 | `HiddenSettings` | text | (3 tab-uri) | Tab-urile ascunse din Setări, separate prin virgulă (ex. `STRING_NOTIFICATION`). Gol = toate vizibile |

@@ -8,10 +8,11 @@ namespace M1lator.Boost
     /// Replaces InputMapper.HandleRawInput (HD-Player): raw mouse input used while a game captures the mouse.
     /// Stock BlueStacks allocates a buffer per WM_INPUT and forwards every single event to the keymapper, which sends
     /// a touch update into the VM. 1000-8000 Hz mice flood the window thread and the VM, and FPS drops while aiming.
-    /// Here: one reusable buffer, and relative mouse moves are summed while more WM_INPUT messages are already
-    /// queued - the last one of a burst carries the total. Lossless (no movement dropped), and when the thread keeps
-    /// up every event still goes through unchanged. Buttons/wheel always flush immediately.
-    /// Setting: HKLM\SOFTWARE\BlueStacks_bgp64\m1lator  CoalesceMouse  REG_DWORD 1 = on (default)
+    /// Here: one reusable buffer (no allocation per event). Optional: relative mouse moves summed while more WM_INPUT
+    /// messages are already queued (the last one of a burst carries the total; buttons/wheel flush immediately).
+    /// Coalescing is OFF by default: the native keymapper turns each raw event into touch movement on its own, and
+    /// merged deltas made aim skip/stutter in Standoff 2 (v1.9.0 feedback). Every event is forwarded as in stock BlueStacks.
+    /// Setting: HKLM\SOFTWARE\BlueStacks_bgp64\m1lator  CoalesceMouse  REG_DWORD 1 = on, 0/absent = off (default)
     /// </summary>
     public static class RawInput
     {
@@ -75,9 +76,9 @@ namespace M1lator.Boost
             try
             {
                 using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\BlueStacks_bgp64\m1lator"))
-                    return !(key?.GetValue("CoalesceMouse") is int v) || v != 0;
+                    return key?.GetValue("CoalesceMouse") is int v && v == 1;
             }
-            catch { return true; }
+            catch { return false; }
         }
 
         [StructLayout(LayoutKind.Sequential)]
