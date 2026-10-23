@@ -1,0 +1,9 @@
+{
+  "name": "Midnight Violet",
+  "accent": "#8B5CF6",
+  "tint": "#17161D",
+  "glass": 0.70,
+  "radius": 14,
+  "glassMode": "glass",
+  "dim": 0.5
+}

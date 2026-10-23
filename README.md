@@ -19,6 +19,25 @@ Pornește BlueStacks. Gata.
 
 Dublu-click pe **`Update.bat`**. Verifică dacă a apărut o versiune nouă pe GitHub; dacă da, o descarcă și o instalează singur.
 
+## Teme
+
+Dublu-click pe **`Theme.bat`** (nu cere administrator). Alegi un număr, apoi repornești BlueStacks.
+
+| | Temă | Accent | Stil |
+|---|---|---|---|
+| 1 | **Liquid Glass** (implicit) | albastru `#0A84FF` | sticlă |
+| 2 | Graphite | albastru `#0A84FF` | solid |
+| 3 | Midnight Violet | violet `#8B5CF6` | sticlă |
+| 4 | Sunset | portocaliu `#FF6B3D` | sticlă |
+| 5 | Aurora | verde `#30D158` | sticlă |
+| 6 | Rose | roz `#FF375F` | sticlă |
+| C | Culoare proprie | orice `#RRGGBB` | sticlă sau solid |
+
+**Sticla** = wallpaper-ul tău de Windows, blurat puternic și nuanțat, văzut prin bara de sus și cea laterală.
+Fără imagine de wallpaper (culoare simplă sau slideshow), apar pete de lumină colorate, ca la wallpaper-ele iOS. Nu consumă nimic în timpul jocului: imaginea se calculează o singură dată, la pornire.
+
+Temă proprie, permanentă: copiază un fișier din `scripts\themes\`, schimbă valorile (nume, accent, tint, glass 0–1, radius, dim) și apare automat în listă.
+
 ## Hyper-V / Memory Integrity (important)
 
 BlueStacks 4 **nu pornește** cât timp hypervisor-ul Windows e activ (Memory Integrity / Core Isolation, Hyper-V, WSL2). `Install.bat` te întreabă dacă vrei să-l oprești.
@@ -59,7 +78,7 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 
 | | |
 |---|---|
-| **Temă** | „m1lator Dark”, în stil Apple: gri închis neutru, accent albastru (#0A84FF), colțuri rotunjite |
+| **Temă** | 6 teme gata făcute, plus culoare proprie, toate alese din **`Theme.bat`**. Implicit: **Liquid Glass**, adică bara de sus și cea laterală translucide peste wallpaper-ul tău blurat (ca Mica / Liquid Glass de la Apple), accent albastru, colțuri mari. |
 | **Branding** | Sus în stânga apare **M1LATOR** cu efect RGB animat (în loc de logo-ul și versiunea BlueStacks). În Setări → About apare versiunea m1lator. |
 | **Font** | Toată interfața folosește **Geist**. Logo-ul folosește **Space Grotesk**. Ambele fonturi sunt open source, cu licență OFL. |
 | **Pagina Home** | Pagina proprie în stil macOS: doar **Library** (aplicațiile tale), cu căutare. **Game center** e scos de tot: fără magazin din cloud, fără reclame, se încarcă instant. |
@@ -72,7 +91,6 @@ Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.
 | **Input** | Mișcările de mouse merg spre Android una câte una, ca în BlueStacks original, dar fără alocare de memorie la fiecare eveniment. Tastele ținute apăsate nu mai trimit repetări inutile. Opțional (`CoalesceMouse` = 1): mișcările care vin în rafală se adună într-una singură. Poate ajuta la mouse-uri de 4000–8000 Hz, dar în Standoff 2 a făcut ochirea sacadată. |
 | **Senzori** | Android cere senzori pe care BlueStacks 4 nu îi are (magnetometru, orientare). Cererile sunt ignorate în liniște, fără să mai fie scrise erori în log de mai multe ori pe secundă. |
 | **Nuclee** | vCPU = nuclee P fizice − 2 (fără Hyper-Threading) sau − 1 (cu Hyper-Threading), maximum 6, ca randarea și input-ul să aibă mereu nuclee libere. Toate nucleele pentru Android ar însemna mai puține FPS și input lag, pentru că firele de randare și de input ar aștepta după vCPU. |
-| **Plan de energie** | Cât timp joci, Windows trece pe **m1lator Ultimate Performance**. La închiderea ultimei instanțe, revine la planul tău. |
 | **Procese BlueStacks** | BstkSVC (disc/rețea pentru Android) rulează la prioritate mai mare și fără throttling de energie. Nici interfața nu mai are throttling. |
 | **DPI** | Android pornește mereu cu **DPI 440**. Recomandat la 1280x960 sau mai mare: la 1280x720, DPI 440 lasă prea puțin spațiu și unele aplicații arată ciudat. |
 | **Setări** | Stil macOS: bară laterală cu selecție albastră, titlu mare. Scoase tab-urile inutile: Notificări, Game settings (doar PUBG/Free Fire/COD), Scurtături. Scoase din Preferințe și din bara de sus: Discord, scurtături pe desktop, Help, ghidul de început, butonul de cont. |

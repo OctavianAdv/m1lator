@@ -1,0 +1,9 @@
+{
+  "name": "Graphite",
+  "accent": "#0A84FF",
+  "tint": "#1C1C1E",
+  "glass": 1.0,
+  "radius": 12,
+  "glassMode": "off",
+  "dim": 0.5
+}

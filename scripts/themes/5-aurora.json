@@ -1,0 +1,9 @@
+{
+  "name": "Aurora",
+  "accent": "#30D158",
+  "tint": "#161B19",
+  "glass": 0.70,
+  "radius": 14,
+  "glassMode": "glass",
+  "dim": 0.5
+}

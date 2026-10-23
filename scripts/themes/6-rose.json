@@ -1,0 +1,9 @@
+{
+  "name": "Rose",
+  "accent": "#FF375F",
+  "tint": "#1D1A1C",
+  "glass": 0.70,
+  "radius": 14,
+  "glassMode": "glass",
+  "dim": 0.5
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Liquid Glass",
+  "accent": "#0A84FF",
+  "tint": "#1C1C1E",
+  "glass": 0.62,
+  "radius": 16,
+  "glassMode": "glass",
+  "dim": 0.52
+}

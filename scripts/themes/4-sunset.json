@@ -1,0 +1,9 @@
+{
+  "name": "Sunset",
+  "accent": "#FF6B3D",
+  "tint": "#1E1A19",
+  "glass": 0.70,
+  "radius": 14,
+  "glassMode": "glass",
+  "dim": 0.5
+}

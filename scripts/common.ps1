@@ -35,6 +35,20 @@ function Invoke-Elevated([string]$ScriptPath) {
     return $true
 }
 
+# Writes a value under HKLM\...\BlueStacks_bgp64\m1lator. Works without admin: the installer grants Users
+# "set value" there, and the key is opened with only those rights (Set-ItemProperty asks for more and fails).
+function Set-M1Value([string]$Name, $Value, [string]$Kind = 'String') {
+    $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\BlueStacks_bgp64\m1lator',
+        [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
+        [System.Security.AccessControl.RegistryRights]'QueryValues, SetValue')
+    if (-not $k) { throw 'm1lator nu e instalat (ruleaza Install.bat). / m1lator is not installed.' }
+    try { $k.SetValue($Name, $Value, [Microsoft.Win32.RegistryValueKind]$Kind) } finally { $k.Close() }
+}
+
+function Get-M1Value([string]$Name) {
+    (Get-ItemProperty "$BsKey\m1lator" -Name $Name -ErrorAction SilentlyContinue).$Name
+}
+
 function Stop-BlueStacks {
     Get-Process -Name 'Bluestacks', 'HD-Player', 'HD-Agent', 'HD-MultiInstanceManager', 'BstkSVC' -ErrorAction SilentlyContinue |
         Stop-Process -Force

@@ -1,6 +1,6 @@
 <#
   m1lator: settings (no binary patching).
-  - generates the m1lator Midnight theme from the local stock theme, installs and selects it
+  - generates the m1lator theme (preset chosen with Theme.bat, default Liquid Glass) and selects it
   - per-instance FPS / render / ASTC presets
   - renames the high-FPS checkbox to "High framerate mode"
   - turns off promotions, app recommendations, speed-up tips and timeline stats via bst_config
@@ -33,26 +33,27 @@ function Set-Reg($path, $name, $value, $type = 'DWord') {
     Set-ItemProperty -Path $path -Name $name -Value $value -Type $type
 }
 
-# ---------------------------------------------------------------- theme
+# ---------------------------------------------------------------- m1lator settings key
+if (-not (Test-Path "$BsKey\m1lator")) { New-Item "$BsKey\m1lator" | Out-Null }
+# Theme.bat (no admin) and HD-Player write values here: let Users set values (not create subkeys)
+# (SID S-1-5-32-545 = BUILTIN\Users, works on any Windows language)
+$acl = Get-Acl "$BsKey\m1lator"
+$users = New-Object System.Security.Principal.SecurityIdentifier 'S-1-5-32-545'
+$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule($users, 'ReadKey, SetValue', 'Allow')))
+Set-Acl "$BsKey\m1lator" $acl
+
+# ---------------------------------------------------------------- theme (preset from Theme.bat, default Liquid Glass)
 if (-not $SkipTheme) {
-    $tools = Get-M1latorTools
-    $themeDst = Join-Path $Client 'm1lator'
-    & $tools.ThemeGen (Join-Path $Client 'Assets') $themeDst
-    if ($LASTEXITCODE) { throw 'theme generation failed' }
-    Set-Reg "$BsKey\Client" 'ClientThemeName' 'm1lator' 'String'
+    Set-Reg "$BsKey\Client" 'ClientThemeName' 'm1lator' 'String'      # records the original for uninstall
+    $preset = Get-M1Value 'ThemePreset'
+    if (-not $preset -or -not (Test-Path (Join-Path $PSScriptRoot "themes\$preset.json"))) { $preset = '1-liquid-glass' }
+    & (Join-Path $PSScriptRoot 'theme.ps1') -Preset $preset -NoPause
 }
 
 # ---------------------------------------------------------------- fonts + branding (read by M1lator.Client.dll)
 $fontDst = Join-Path $Client 'm1lator-fonts'
 if (Test-Path $fontDst) { Remove-Item -Recurse -Force $fontDst }
 Copy-Item -Recurse (Join-Path $PSScriptRoot 'fonts') $fontDst
-if (-not (Test-Path "$BsKey\m1lator")) { New-Item "$BsKey\m1lator" | Out-Null }
-# HD-Player runs without admin and writes runtime state here (power plan to restore): let Users set values
-# (SID S-1-5-32-545 = BUILTIN\Users, works on any Windows language)
-$acl = Get-Acl "$BsKey\m1lator"
-$users = New-Object System.Security.Principal.SecurityIdentifier 'S-1-5-32-545'
-$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule($users, 'ReadKey, SetValue', 'Allow')))
-Set-Acl "$BsKey\m1lator" $acl
 $version = if (Test-Path (Join-Path $Root 'VERSION')) { (Get-Content (Join-Path $Root 'VERSION') -Raw).Trim() } else { '' }
 Set-ItemProperty "$BsKey\m1lator" -Name 'Version' -Value $version -Type String
 if (-not (Get-ItemProperty "$BsKey\m1lator" -Name 'Font' -ErrorAction SilentlyContinue)) {
@@ -60,20 +61,28 @@ if (-not (Get-ItemProperty "$BsKey\m1lator" -Name 'Font' -ErrorAction SilentlyCo
 }
 Write-Host "branding: Geist font, RGB M1LATOR title, m1lator $version in About"
 
-# ---------------------------------------------------------------- power plan used while playing
-# HD-Player (M1lator.Boost) switches to this plan on start and restores the user's plan when the last instance closes.
-$planName = 'm1lator Ultimate Performance'
-$plan = (Get-ItemProperty "$BsKey\m1lator" -Name 'PowerScheme' -ErrorAction SilentlyContinue).PowerScheme
-if (-not $plan -or ((powercfg /list | Out-String) -notmatch [regex]::Escape($plan))) {
-    $guidRe = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
-    $plan = [regex]::Match((powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null | Out-String), $guidRe).Value   # Ultimate Performance
-    if (-not $plan) { $plan = [regex]::Match((powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2>$null | Out-String), $guidRe).Value }  # High performance
-    if ($plan) { powercfg -changename $plan $planName 'Activated by m1lator while BlueStacks runs' | Out-Null }
+# ---------------------------------------------------------------- remove the power plan from v1.8 / v1.9
+# (users run Ultimate Performance themselves; m1lator no longer switches plans)
+$oldPlan = Get-M1Value 'PowerScheme'
+if ($oldPlan) {
+    if ((powercfg /getactivescheme | Out-String) -match [regex]::Escape($oldPlan)) {
+        # back to the user's plan: the one saved by v1.8/v1.9, else their own Ultimate Performance, else any custom
+        # (non built-in) plan, else Windows' High performance
+        $plans = @(powercfg /list | Select-String 'GUID: ([0-9a-fA-F-]{36})\s+\((.*)\)' | ForEach-Object {
+            [pscustomobject]@{ Guid = $_.Matches[0].Groups[1].Value; Name = $_.Matches[0].Groups[2].Value.TrimEnd(' ', '*', ')') } } |
+            Where-Object { $_.Guid -ne $oldPlan })
+        $builtin = '381b4222-f694-41f0-9685-ff5bb260df2e', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', 'a1841308-3541-4fab-bc81-f71556f20b4a'
+        $prev = Get-M1Value 'PreviousPowerScheme'
+        $back = ($plans | Where-Object { $_.Guid -eq $prev } | Select-Object -First 1).Guid
+        if (-not $back) { $back = ($plans | Where-Object { $_.Name -match 'Ultimate' } | Select-Object -First 1).Guid }
+        if (-not $back) { $back = ($plans | Where-Object { $builtin -notcontains $_.Guid } | Select-Object -First 1).Guid }
+        if (-not $back) { $back = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' }
+        powercfg /setactive $back | Out-Null
+    }
+    powercfg /delete $oldPlan 2>$null | Out-Null
+    Remove-ItemProperty "$BsKey\m1lator" -Name 'PowerScheme', 'PreviousPowerScheme' -ErrorAction SilentlyContinue
+    Write-Host 'power plan: removed the m1lator plan (your own plan stays active)'
 }
-if ($plan) {
-    Set-ItemProperty "$BsKey\m1lator" -Name 'PowerScheme' -Value $plan -Type String
-    Write-Host "power plan while playing: $planName"
-} else { Write-Host 'power plan: could not create a performance plan, keeping the current one' }
 
 # ---------------------------------------------------------------- BlueStacks cloud off
 # Every BlueStacks server call (stats, usage, GRM rules, post-boot, promotions, country lookups...) is built from

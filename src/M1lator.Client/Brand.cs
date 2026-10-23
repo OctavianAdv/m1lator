@@ -47,6 +47,104 @@ namespace M1lator.Client
                     TextElement.FontFamilyProperty.OverrideMetadata(t, new FrameworkPropertyMetadata(font, FrameworkPropertyMetadataOptions.Inherits));
             }
             catch { }
+            try
+            {
+                // Liquid Glass: give every BlueStacks window the blurred-wallpaper glass base once it is shown
+                EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
+                    new RoutedEventHandler((s, e) => { if (s is Window w) ApplyGlass(w); }));
+            }
+            catch { }
+        }
+
+        // ---------------------------------------------------------------- glass
+        // Liquid Glass the way Windows' own Mica works: the desktop wallpaper, heavily blurred and tinted, painted as the
+        // window's base layer; the theme's translucent chrome brushes (ThemeGen Preset.Glass) show it through.
+        // (DWM blur-behind does not render on BlueStacks' layered AllowsTransparency window, see v1.10 notes.)
+        // Blur is free: the wallpaper is decoded at 48 px and smoothly upscaled - no Effect, no per-frame cost.
+        // m1lator\Glass     REG_DWORD 0 = off, 1 = on          (Theme.bat, from the preset)
+        // m1lator\GlassTint REG_SZ   #AARRGGBB tint over the wallpaper
+        // m1lator\Accent    REG_SZ   #RRGGBB used for the fallback light blobs (no wallpaper image)
+        static Brush glassBrush;
+
+        public static void ApplyGlass(Window window)
+        {
+            try
+            {
+                if (GetDword("Glass", 0) <= 0) return;
+                // the window's root surface: MainWindow.OuterBorder, or a Border as window content (keeps its corner radius)
+                Border root = Get(window, "OuterBorder") as Border ?? window.Content as Border;
+                if (root == null) return;
+                if (glassBrush == null) glassBrush = BuildGlassBrush();
+                root.Background = glassBrush;
+            }
+            catch { }
+        }
+
+        static Brush BuildGlassBrush()
+        {
+            Color tint = ParseColor(GetSetting("GlassTint", "#B81C1C1E"));
+            Color accent = ParseColor(GetSetting("Accent", "#0A84FF"));
+            var group = new DrawingGroup();
+            var full = new Rect(0, 0, 160, 90);
+
+            ImageSource wallpaper = LoadWallpaperThumb();
+            if (wallpaper != null)
+            {
+                group.Children.Add(new ImageDrawing(wallpaper, full));
+            }
+            else
+            {
+                // no image wallpaper (solid colour / slideshow): soft accent light blobs, iOS-wallpaper style
+                group.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x14)), null, new RectangleGeometry(full)));
+                group.Children.Add(Blob(accent, 0.25, 0.20, 0.9));
+                group.Children.Add(Blob(Color.FromRgb(0xBF, 0x5A, 0xF2), 0.85, 0.85, 0.8));
+                group.Children.Add(Blob(Color.FromRgb(0x64, 0xD2, 0xFF), 0.90, 0.10, 0.5));
+            }
+            group.Children.Add(new GeometryDrawing(new SolidColorBrush(tint), null, new RectangleGeometry(full)));
+            // specular sheen across the top, the "liquid" highlight
+            var sheen = new LinearGradientBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF), Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF), 90);
+            group.Children.Add(new GeometryDrawing(sheen, null, new RectangleGeometry(new Rect(0, 0, 160, 18))));
+
+            var brush = new DrawingBrush(group) { Stretch = Stretch.UniformToFill };
+            RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);   // smooth upscale = the blur
+            RenderOptions.SetCachingHint(brush, CachingHint.Cache);
+            brush.Freeze();
+            return brush;
+        }
+
+        static GeometryDrawing Blob(Color c, double x, double y, double strength)
+        {
+            var g = new RadialGradientBrush(Color.FromArgb((byte)(0xFF * strength), c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B))
+            {
+                Center = new Point(x, y), GradientOrigin = new Point(x, y), RadiusX = 0.6, RadiusY = 0.9,
+            };
+            return new GeometryDrawing(g, null, new RectangleGeometry(new Rect(0, 0, 160, 90)));
+        }
+
+        static ImageSource LoadWallpaperThumb()
+        {
+            try
+            {
+                string path;
+                using (var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop"))
+                    path = key?.GetValue("WallPaper") as string;
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                var img = new System.Windows.Media.Imaging.BitmapImage();
+                img.BeginInit();
+                img.UriSource = new Uri(path);
+                img.DecodePixelWidth = 48;                                      // tiny decode -> heavy blur when stretched
+                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                img.EndInit();
+                img.Freeze();
+                return img;
+            }
+            catch { return null; }
+        }
+
+        static Color ParseColor(string hex)
+        {
+            try { return (Color)ColorConverter.ConvertFromString(hex); }
+            catch { return Color.FromArgb(0xB8, 0x1C, 0x1C, 0x1E); }
         }
 
         public static void ApplyTopBar(object topBar)
@@ -217,6 +315,12 @@ namespace M1lator.Client
             ui.Visibility = Visibility.Collapsed;
             DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(UIElement))
                 .AddValueChanged(ui, (s, e) => { if (ui.Visibility != Visibility.Collapsed) ui.Visibility = Visibility.Collapsed; });
+        }
+
+        static int GetDword(string name, int fallback)
+        {
+            using (var key = Registry.LocalMachine.OpenSubKey(KeyPath))
+                return key?.GetValue(name) is int v ? v : fallback;
         }
 
         static string GetSetting(string name, string fallback)
