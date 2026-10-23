@@ -31,6 +31,15 @@ Dublu-click pe **`Diagnose.bat`**. Pe Desktop apare `m1lator-diagnoza-....txt`, 
 Verifică: hypervisor-ul, virtualizarea din BIOS, modul „raw” (1 nucleu), dacă se folosește placa video integrată în loc de cea dedicată, HDD vs SSD, RAM, laptop pe baterie, Game DVR, setările fiecărei instanțe.
 Trimite fișierul ăsta când ceri ajutor.
 
+## Google Play: „authentication failed”
+
+Logarea Google se face în Android, nu în m1lator. Blocarea cloud-ului BlueStacks nu o afectează: Android are propria conexiune.
+BlueStacks 4 are însă un Android System WebView din 2016 (versiunea 52), iar Google poate refuza logarea din browsere atât de vechi.
+
+1. În Android: **Settings → Date & time** → pornește „Automatic date & time”. O oră greșită strică logarea.
+2. Încearcă logarea din **Settings → Accounts → Add account → Google**, nu din pop-up-ul BlueStacks.
+3. Dacă tot nu merge: lasă instanța pornită, încearcă logarea, apoi rulează **`Diagnose.bat`**. Secțiunea „Google Play / cont Google” arată eroarea exactă din Android. Trimite fișierul.
+
 ## Dezinstalare
 
 Dublu-click pe **`Uninstall.bat`**. BlueStacks revine exact cum era.

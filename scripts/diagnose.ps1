@@ -109,6 +109,35 @@ $logs = Join-Path $DataDir 'Logs'
 $boost = Get-Content (Join-Path $logs 'm1lator.log') -Tail 3 -ErrorAction SilentlyContinue
 if ($boost) { $boost | ForEach-Object { Info "boost: $_" } } else { Info 'm1lator.log nu exista inca (BlueStacks nu a pornit de la instalare).' }
 
+# ---------------------------------------------------------------- Google sign-in (runs inside Android)
+Section 'Google Play / cont Google'
+$playerLog = Join-Path $logs 'Player.log'
+$pkgLine = Get-Content $playerLog -Tail 6000 -ErrorAction SilentlyContinue | Select-String 'installed_packages' | Select-Object -Last 1
+if ($pkgLine -and $pkgLine.Line -match '"package":"com\.(android|google\.android)\.webview"[^}]*"versionName":"(\d+)[^"]*"') {
+    $wv = [int]$Matches[2]
+    if ($wv -lt 80) { Bad "Android System WebView $wv (foarte vechi): Google poate refuza autentificarea din el." 'Vezi in README sectiunea "Google Play: authentication failed".' }
+    else { Ok "Android System WebView $wv" }
+}
+$adb = Join-Path $PF 'HD-Adb.exe'
+$running = @(Get-Process HD-Player -ErrorAction SilentlyContinue)
+if (-not $running) { Info 'Porneste instanta si incearca logarea, apoi ruleaza din nou Diagnose.bat ca sa vad eroarea exacta din Android.' }
+elseif (Test-Path $adb) {
+    foreach ($vm in (Reg "$BsKey\Config" 'VmList')) {
+        $port = Reg "$BsKey\Guests\$vm\Network\Redirect" 'tcp/5555'
+        if (-not $port) { continue }
+        $target = "127.0.0.1:$port"
+        $null = & $adb connect $target 2>&1
+        $date = (& $adb -s $target shell date 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or $date -match 'error|unable|refused|not found|offline') { Info "$vm : adb indisponibil (Setari BlueStacks -> Preferinte -> Android Debug Bridge)."; continue }
+        Info "$vm : data/ora in Android: $date (PC: $(Get-Date -Format 'ddd MMM dd HH:mm:ss yyyy'))"
+        $auth = & $adb -s $target logcat -d -v time 2>$null |
+            Select-String -Pattern 'GLSUser|GoogleAuth|BadAuthentication|NeedsBrowser|AuthenticationFailed|Auth\w*Exception|MinuteMaid|Webview.*(old|update)|SSLHandshake|CertPathValidator|NetworkError|DeviceManagementRequired|AccountManager.*(error|fail)' |
+            Select-Object -Last 25
+        if ($auth) { Info "$vm : erori de autentificare din Android:"; $auth | ForEach-Object { Line "      $($_.Line)" } }
+        else { Info "$vm : nicio eroare de autentificare in log (incearca logarea, apoi ruleaza din nou Diagnose.bat)." }
+    }
+}
+
 Section "Rezumat: $problems problem$(if ($problems -eq 1) { 'a' } else { 'e' }) gasit$(if ($problems -eq 1) { 'a' } else { 'e' })"
 
 # ---------------------------------------------------------------- raw log excerpts for debugging
